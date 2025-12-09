@@ -8,6 +8,14 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+    </style>
 </head>
 <body>
     <div id="root"></div>
@@ -53,6 +61,14 @@
             </svg>
         );
         
+        const Upload = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+        );
+        
         const X = () => (
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -87,6 +103,9 @@
             const [hoveredUnit, setHoveredUnit] = useState(null);
             const [hoverTimeout, setHoverTimeout] = useState(null);
             const [contextMenuSemester, setContextMenuSemester] = useState(null);
+            const [touchStartPos, setTouchStartPos] = useState(null);
+            const [plans, setPlans] = useState([]);
+            const [currentPlanId, setCurrentPlanId] = useState(null);
             
             useEffect(() => {
                 const loadUnits = async () => {
@@ -146,29 +165,126 @@
             }, []);
             
             useEffect(() => {
-                const saved = localStorage.getItem('monashCoursePlan');
-                if (saved) {
-                    const data = JSON.parse(saved);
-                    setStartYear(data.startYear);
-                    setDegreeLength(data.degreeLength);
-                    setSemesters(data.semesters);
-                    setShowLanding(false);
+                try {
+                    const saved = localStorage.getItem('monashCoursePlans');
+                    if (saved) {
+                        const allPlans = JSON.parse(saved);
+                        setPlans(allPlans);
+                        if (allPlans.length > 0) {
+                            const lastPlanId = localStorage.getItem('monashLastPlanId');
+                            const planToLoad = allPlans.find(p => p.id === lastPlanId) || allPlans[0];
+                            setCurrentPlanId(planToLoad.id);
+                            loadPlan(planToLoad);
+                            setShowLanding(false);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error loading saved plans:', error);
+                    localStorage.removeItem('monashCoursePlans');
                 }
             }, []);
             
+            const loadPlan = (plan) => {
+                const validSemesters = plan.semesters.map(sem => ({
+                    ...sem,
+                    units: Array.isArray(sem.units) ? sem.units : [null, null, null, null]
+                }));
+                setStartYear(plan.startYear);
+                setDegreeLength(plan.degreeLength);
+                setSemesters(validSemesters);
+            };
+            
+            const savePlans = (updatedPlans, planId) => {
+                setPlans(updatedPlans);
+                localStorage.setItem('monashCoursePlans', JSON.stringify(updatedPlans));
+                localStorage.setItem('monashLastPlanId', planId);
+            };
+            
+            const updateCurrentPlan = (newSemesters, newStartYear, newDegreeLength) => {
+                const updatedPlans = plans.map(p => 
+                    p.id === currentPlanId 
+                        ? { ...p, semesters: newSemesters, startYear: newStartYear || startYear, degreeLength: newDegreeLength || degreeLength }
+                        : p
+                );
+                savePlans(updatedPlans, currentPlanId);
+            };
+            
             useEffect(() => {
-                if (semesters.length > 0) {
-                    localStorage.setItem('monashCoursePlan', JSON.stringify({
-                        startYear,
-                        degreeLength,
-                        semesters
-                    }));
+                if (semesters.length > 0 && currentPlanId) {
+                    updateCurrentPlan(semesters);
                 }
-            }, [semesters, startYear, degreeLength]);
+            }, [semesters]);
             
             const handleStartNew = () => {
                 setShowLanding(false);
                 setShowSetup(true);
+            };
+            
+            const createNewPlan = () => {
+                const newPlan = {
+                    id: 'plan-' + Date.now(),
+                    name: `Plan ${plans.length + 1}`,
+                    startYear: 2025,
+                    degreeLength: 4,
+                    semesters: []
+                };
+                const newSemesters = [];
+                for (let year = 0; year < 4; year++) {
+                    newSemesters.push({
+                        id: `s1-${year}`,
+                        label: `Semester 1, ${2025 + year}`,
+                        semesterType: 'Semester 1',
+                        units: [null, null, null, null]
+                    });
+                    newSemesters.push({
+                        id: `s2-${year}`,
+                        label: `Semester 2, ${2025 + year}`,
+                        semesterType: 'Semester 2',
+                        units: [null, null, null, null]
+                    });
+                }
+                newPlan.semesters = newSemesters;
+                const updatedPlans = [...plans, newPlan];
+                savePlans(updatedPlans, newPlan.id);
+                setCurrentPlanId(newPlan.id);
+                loadPlan(newPlan);
+            };
+            
+            const switchPlan = (planId) => {
+                const plan = plans.find(p => p.id === planId);
+                if (plan) {
+                    setCurrentPlanId(planId);
+                    loadPlan(plan);
+                    localStorage.setItem('monashLastPlanId', planId);
+                }
+            };
+            
+            const deletePlan = () => {
+                if (plans.length === 1) {
+                    // Last plan - clear everything
+                    setPlans([]);
+                    setSemesters([]);
+                    setCurrentPlanId(null);
+                    setShowLanding(true);
+                    localStorage.removeItem('monashCoursePlans');
+                    localStorage.removeItem('monashLastPlanId');
+                } else {
+                    const updatedPlans = plans.filter(p => p.id !== currentPlanId);
+                    const newCurrentPlan = updatedPlans[0];
+                    savePlans(updatedPlans, newCurrentPlan.id);
+                    setCurrentPlanId(newCurrentPlan.id);
+                    loadPlan(newCurrentPlan);
+                }
+            };
+            
+            const clearCurrentPlan = () => {
+                if (confirm('Clear all units from this plan? This cannot be undone.')) {
+                    const clearedSemesters = semesters.map(sem => ({
+                        ...sem,
+                        units: [null, null, null, null]
+                    }));
+                    setSemesters(clearedSemesters);
+                }
             };
             
             const handleLoadCourse = () => {
@@ -188,6 +304,54 @@
                     reader.readAsText(file);
                 };
                 input.click();
+            };
+            
+            const handleImportCourse = () => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.json';
+                input.onchange = (e) => {
+                    const file = e.target.files[0];
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const data = JSON.parse(event.target.result);
+                        const validSemesters = data.semesters.map(sem => ({
+                            ...sem,
+                            units: Array.isArray(sem.units) ? sem.units : [null, null, null, null]
+                        }));
+                        setSemesters(validSemesters);
+                        setStartYear(data.startYear);
+                        setDegreeLength(data.degreeLength);
+                    };
+                    reader.readAsText(file);
+                };
+                input.click();
+            };
+
+            const resetSemester = (semesterId) => {
+                const newSemesters = [...semesters];
+                const semIndex = newSemesters.findIndex(s => s.id === semesterId);
+                newSemesters[semIndex].units = [null, null, null, null];
+                setSemesters(newSemesters);
+                setContextMenuSemester(null);
+            };
+            
+            const setAcademicLeave = (semesterId) => {
+                const newSemesters = [...semesters];
+                const semIndex = newSemesters.findIndex(s => s.id === semesterId);
+                newSemesters[semIndex].units = ['ACADEMIC_LEAVE'];
+                newSemesters[semIndex].isAcademicLeave = true;
+                setSemesters(newSemesters);
+                setContextMenuSemester(null);
+            };
+            
+            const removeAcademicLeave = (semesterId) => {
+                const newSemesters = [...semesters];
+                const semIndex = newSemesters.findIndex(s => s.id === semesterId);
+                newSemesters[semIndex].units = [null, null, null, null];
+                newSemesters[semIndex].isAcademicLeave = false;
+                setSemesters(newSemesters);
+                setContextMenuSemester(null);
             };
 
             const addOverloadUnit = (semesterId) => {
@@ -232,6 +396,18 @@
                         units: [null, null, null, null]
                     });
                 }
+                
+                const newPlan = {
+                    id: 'plan-' + Date.now(),
+                    name: `Plan ${plans.length + 1}`,
+                    startYear,
+                    degreeLength,
+                    semesters: newSemesters
+                };
+                
+                const updatedPlans = [...plans, newPlan];
+                savePlans(updatedPlans, newPlan.id);
+                setCurrentPlanId(newPlan.id);
                 setSemesters(newSemesters);
                 setShowSetup(false);
             };
@@ -259,6 +435,23 @@
             
             const handleDragStart = (unit) => {
                 setDraggedUnit(unit);
+            };
+            
+            const handleTouchStart = (e, unit) => {
+                const touch = e.touches[0];
+                setTouchStartPos({ x: touch.clientX, y: touch.clientY });
+                setDraggedUnit(unit);
+            };
+            
+            const handleTouchMove = (e) => {
+                if (!draggedUnit) return;
+                e.preventDefault();
+            };
+            
+            const handleTouchEnd = (e, semesterId, unitIndex) => {
+                if (!draggedUnit) return;
+                handleDrop(semesterId, unitIndex);
+                setTouchStartPos(null);
             };
             
             const handleDrop = (semesterId, unitIndex) => {
@@ -295,12 +488,18 @@
             };
             
             const exportPlan = () => {
-                const dataStr = JSON.stringify({ startYear, degreeLength, semesters }, null, 2);
+                const currentPlan = plans.find(p => p.id === currentPlanId);
+                const dataStr = JSON.stringify({ 
+                    startYear, 
+                    degreeLength, 
+                    semesters,
+                    name: currentPlan?.name || 'Course Plan'
+                }, null, 2);
                 const dataBlob = new Blob([dataStr], { type: 'application/json' });
                 const url = URL.createObjectURL(dataBlob);
                 const link = document.createElement('a');
                 link.href = url;
-                link.download = `monash-course-plan-${startYear}.json`;
+                link.download = `monash-${currentPlan?.name.toLowerCase().replace(/\s+/g, '-')}-${startYear}.json`;
                 link.click();
             };
             
@@ -316,6 +515,7 @@
             
             const isUnitOffered = (unit, semesterType) => {
                 if (!unit) return true;
+                if (!unit.semesters || unit.semesters.includes('Not offered')) return true;
                 return unit.semesters.includes(semesterType);
             };
             
@@ -365,8 +565,9 @@
                                     <li>• Plan your entire Monash degree with drag-and-drop simplicity</li>
                                     <li>• Contains 5000+ units from the Monash handbook</li>
                                     <li>• Drag units from the sidebar into your semester grid</li>
-                                    <li>• Right-click the last semester to remove it</li>
-                                    <li>• Your plan auto-saves in your browser</li>
+                                    <li>• Click the menu button on semesters for more options</li>
+                                    <li>• Create multiple plans and switch between them</li>
+                                    <li>• Your plans auto-save in your browser</li>
                                     <li>• Always check the handbook before making final decisions</li>
                                 </ul>
                             </div>
@@ -376,12 +577,6 @@
                                     className="flex-1 bg-blue-600 text-white py-4 px-6 rounded-lg font-semibold hover:bg-blue-700 transition"
                                 >
                                     Start New Plan
-                                </button>
-                                <button
-                                    onClick={handleLoadCourse}
-                                    className="flex-1 bg-gray-600 text-white py-4 px-6 rounded-lg font-semibold hover:bg-gray-700 transition"
-                                >
-                                    Load Course
                                 </button>
                             </div>
                         </div>
@@ -433,7 +628,7 @@
             
             return (
                 <div className="flex h-screen bg-gray-50">
-                    <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
+                    <div className="w-80 bg-white border-r border-gray-200 flex flex-col flex-shrink-0">
                         <div className="p-4 border-b border-gray-200">
                             <h2 className="text-xl font-bold text-gray-800 mb-4">Unit Library</h2>
                             <div className="relative">
@@ -487,7 +682,9 @@
                                                     key={unit.code}
                                                     draggable
                                                     onDragStart={() => handleDragStart(unit)}
-                                                    className="bg-white border border-gray-200 rounded-lg p-3 cursor-move hover:shadow-md transition flex"
+                                                    onTouchStart={(e) => handleTouchStart(e, unit)}
+                                                    onTouchMove={handleTouchMove}
+                                                    className="bg-white border border-gray-200 rounded-lg p-3 cursor-move hover:shadow-md transition flex touch-none"
                                                 >
                                                     <div
                                                         className="w-1 rounded-l-lg mr-3"
@@ -507,149 +704,223 @@
                     </div>
                     
                     <div className="flex-1 flex flex-col">
-                        <div className="bg-white border-b border-gray-200 p-4 flex justify-between items-center">
-                            <h1 className="text-2xl font-bold text-gray-800">My Course Plan</h1>
-                            <button
-                                onClick={exportPlan}
-                                className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
-                            >
-                                <Download />
-                                Export Plan
-                            </button>
+                        <div className="bg-white border-b border-gray-200 p-4 flex justify-between items-center flex-shrink-0">
+                            <div className="flex items-center gap-2">
+                                {plans.map(plan => (
+                                    <button
+                                        key={plan.id}
+                                        onClick={() => switchPlan(plan.id)}
+                                        className={`px-4 py-2 rounded-lg font-medium transition ${
+                                            plan.id === currentPlanId
+                                                ? 'bg-blue-600 text-white'
+                                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                        }`}
+                                    >
+                                        {plan.name}
+                                    </button>
+                                ))}
+                                <button
+                                    onClick={createNewPlan}
+                                    className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 transition font-medium"
+                                >
+                                    + New Plan
+                                </button>
+                            </div>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={clearCurrentPlan}
+                                    className="flex items-center gap-2 bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition"
+                                >
+                                    Clear Plan
+                                </button>
+                                <button
+                                    onClick={deletePlan}
+                                    className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition"
+                                >
+                                    Delete Plan
+                                </button>
+                                <button
+                                    onClick={handleImportCourse}
+                                    className="flex items-center gap-2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition"
+                                >
+                                    <Upload />
+                                    Import
+                                </button>
+                                <button
+                                    onClick={exportPlan}
+                                    className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+                                >
+                                    <Download />
+                                    Export
+                                </button>
+                            </div>
                         </div>
                         
                         <div className="flex-1 overflow-auto p-8">
                             <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-                                <table className="w-full border-collapse">
-                                    <thead>
-                                        <tr className="bg-gray-100">
-                                            <th className="border border-gray-300 p-3 text-left font-semibold w-48">Semester</th>
-                                            <th className="border border-gray-300 p-3 text-center font-semibold" style={{width: '18%'}}>Unit 1</th>
-                                            <th className="border border-gray-300 p-3 text-center font-semibold" style={{width: '18%'}}>Unit 2</th>
-                                            <th className="border border-gray-300 p-3 text-center font-semibold" style={{width: '18%'}}>Unit 3</th>
-                                            <th className="border border-gray-300 p-3 text-center font-semibold" style={{width: '18%'}}>Unit 4</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {semesters.map((semester, semIdx) => (
-                                            <tr key={semester.id}>
-                                                <td
-                                                    className="border border-gray-300 p-3 font-medium bg-gray-50 relative"
-                                                >
-                                                    <div className="flex items-center justify-between">
-                                                        <span>{semester.label}</span>
-                                                        <button
-                                                            onClick={() => setContextMenuSemester(contextMenuSemester === semester.id ? null : semester.id)}
-                                                            className="text-gray-500 hover:text-gray-700 p-1"
-                                                        >
-                                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                                                                <circle cx="12" cy="5" r="2"></circle>
-                                                                <circle cx="12" cy="12" r="2"></circle>
-                                                                <circle cx="12" cy="19" r="2"></circle>
-                                                            </svg>
-                                                        </button>
-                                                    </div>
-                                                    {contextMenuSemester === semester.id && (
-                                                        <div className="absolute right-0 top-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 w-48">
+                                <table className="w-full border-collapse" style={{ minWidth: '900px' }}>
+                                        <thead>
+                                            <tr className="bg-gray-100">
+                                                <th className="border border-gray-300 p-3 text-left font-semibold" style={{width: '180px'}}>Semester</th>
+                                                <th className="border border-gray-300 p-3 text-center font-semibold">Units</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {semesters.map((semester, semIdx) => (
+                                                <tr key={semester.id}>
+                                                    <td
+                                                        className="border border-gray-300 p-3 font-medium bg-gray-50 relative align-top"
+                                                        style={{width: '180px'}}
+                                                    >
+                                                        <div className="flex items-center justify-between">
+                                                            <span>{semester.label}</span>
                                                             <button
-                                                                onClick={() => addOverloadUnit(semester.id)}
-                                                                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm"
+                                                                onClick={() => setContextMenuSemester(contextMenuSemester === semester.id ? null : semester.id)}
+                                                                className="text-gray-500 hover:text-gray-700 p-1"
                                                             >
-                                                                Add Overload Unit
+                                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                                                    <circle cx="12" cy="5" r="2"></circle>
+                                                                    <circle cx="12" cy="12" r="2"></circle>
+                                                                    <circle cx="12" cy="19" r="2"></circle>
+                                                                </svg>
                                                             </button>
-                                                            {semester.units.length > 4 && (
+                                                        </div>
+                                                        {contextMenuSemester === semester.id && (
+                                                            <div className="absolute left-full ml-2 top-0 bg-white border border-gray-300 rounded-lg shadow-lg z-50 w-56">
                                                                 <button
-                                                                    onClick={() => removeOverloadUnit(semester.id)}
+                                                                    onClick={() => resetSemester(semester.id)}
                                                                     className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm"
                                                                 >
-                                                                    Remove Overload Unit
+                                                                    Reset Semester (4 units)
                                                                 </button>
-                                                            )}
-                                                            {semIdx === semesters.length - 1 && (
-                                                                <button
-                                                                    onClick={() => deleteSemester(semester.id)}
-                                                                    className="w-full text-left px-4 py-2 hover:bg-red-100 text-sm text-red-600 border-t border-gray-200"
-                                                                >
-                                                                    Delete Semester
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                </td>
-                                                {semester.units.map((unit, unitIdx) => (
-                                                    <td
-                                                        key={unitIdx}
-                                                        className="border border-gray-300 p-2 align-top"
-                                                        style={{width: '18%'}}
-                                                        onDragOver={(e) => e.preventDefault()}
-                                                        onDrop={() => handleDrop(semester.id, unitIdx)}
-                                                    >
-                                                        {unit ? (
-                                                            <div
-                                                                className="relative bg-white border border-gray-200 rounded-lg p-3 min-h-24 flex group"
-                                                                draggable
-                                                                onDragStart={() => handleDragStart(unit)}
-                                                                onMouseEnter={() => handleMouseEnter(unit)}
-                                                                onMouseLeave={handleMouseLeave}
-                                                            >
-                                                                <div
-                                                                    className="w-1 rounded-l-lg mr-3 flex-shrink-0"
-                                                                    style={{ backgroundColor: FACULTY_COLORS[unit.faculty] || '#999' }}
-                                                                />
-                                                                <div className="flex-1 min-w-0">
-                                                                    <div className="font-bold text-gray-800">{unit.code}</div>
-                                                                    <div className="text-sm text-gray-600 break-words">{unit.name}</div>
-                                                                    {!isUnitOffered(unit, semester.semesterType) && (
-                                                                        <div className="text-xs text-red-600 mt-1">
-                                                                            ⚠️ Not offered {semester.semesterType}
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                                <button
-                                                                    onClick={() => removeUnit(semester.id, unitIdx)}
-                                                                    className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition flex-shrink-0"
-                                                                >
-                                                                    <X />
-                                                                </button>
-                                                                
-                                                                {hoveredUnit && hoveredUnit.code === unit.code && (
-                                                                    <div
-                                                                        className="absolute z-50 bg-gray-800 text-white p-2 rounded shadow-lg text-xs -bottom-10 left-0 whitespace-nowrap"
-                                                                        onMouseEnter={handlePopupEnter}
-                                                                        onMouseLeave={handlePopupLeave}
-                                                                    >
-                                                                        <a
-                                                                            href={`https://handbook.monash.edu/2026/units/${unit.code}`}
-                                                                            target="_blank"
-                                                                            rel="noopener noreferrer"
-                                                                            className="hover:underline"
+                                                                {!semester.isAcademicLeave && (
+                                                                    <>
+                                                                        <button
+                                                                            onClick={() => addOverloadUnit(semester.id)}
+                                                                            className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm"
                                                                         >
-                                                                            View in Handbook →
-                                                                        </a>
-                                                                    </div>
+                                                                            Add Overload Unit
+                                                                        </button>
+                                                                        {semester.units.length > 4 && (
+                                                                            <button
+                                                                                onClick={() => removeOverloadUnit(semester.id)}
+                                                                                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm"
+                                                                            >
+                                                                                Remove Overload Unit
+                                                                            </button>
+                                                                        )}
+                                                                        <button
+                                                                            onClick={() => setAcademicLeave(semester.id)}
+                                                                            className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm border-t border-gray-200"
+                                                                        >
+                                                                            Set as Academic Leave
+                                                                        </button>
+                                                                    </>
                                                                 )}
-                                                            </div>
-                                                        ) : (
-                                                            <div className="min-h-24 border-2 border-dashed border-gray-200 rounded-lg flex items-center justify-center text-gray-400 text-sm">
-                                                                Drop unit here
+                                                                {semester.isAcademicLeave && (
+                                                                    <button
+                                                                        onClick={() => removeAcademicLeave(semester.id)}
+                                                                        className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm border-t border-gray-200"
+                                                                    >
+                                                                        Remove Academic Leave
+                                                                    </button>
+                                                                )}
+                                                                {semIdx === semesters.length - 1 && (
+                                                                    <button
+                                                                        onClick={() => deleteSemester(semester.id)}
+                                                                        className="w-full text-left px-4 py-2 hover:bg-red-100 text-sm text-red-600 border-t border-gray-200"
+                                                                    >
+                                                                        Delete Semester
+                                                                    </button>
+                                                                )}
                                                             </div>
                                                         )}
                                                     </td>
-                                                ))}
-                                            </tr>
-                                        ))}    
-                                    </tbody>
-                                </table>
-                                
-                                <div className="p-4 bg-gray-50 border-t border-gray-300 flex justify-center">
-                                    <button
-                                        onClick={addSemester}
-                                        className="flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition font-semibold"
-                                    >
-                                        <Plus />
-                                        Add Semester
-                                    </button>
-                                </div>
+                                                    <td className="border border-gray-300 p-2 align-top">
+                                                        {semester.isAcademicLeave ? (
+                                                            <div className="h-24 bg-yellow-50 border-2 border-yellow-300 rounded-lg flex items-center justify-center">
+                                                                <span className="text-yellow-700 font-semibold">Academic Leave</span>
+                                                            </div>
+                                                        ) : (
+                                                            <div className={'grid gap-2 grid-cols-' + semester.units.length}>
+                                                                {semester.units.map((unit, unitIdx) => (
+                                                                <div
+                                                                    key={unitIdx}
+                                                                    className="flex"
+                                                                    onDragOver={(e) => e.preventDefault()}
+                                                                    onDrop={() => handleDrop(semester.id, unitIdx)}
+                                                                    onTouchEnd={(e) => handleTouchEnd(e, semester.id, unitIdx)}
+                                                                >
+                                                                    {unit ? (
+                                                                        <div
+                                                                            className="relative bg-white border border-gray-200 rounded-lg p-3 h-24 flex group w-full overflow-hidden"
+                                                                            draggable
+                                                                            onDragStart={() => handleDragStart(unit)}
+                                                                            onTouchStart={(e) => handleTouchStart(e, unit)}
+                                                                            onMouseEnter={() => handleMouseEnter(unit)}
+                                                                            onMouseLeave={handleMouseLeave}
+                                                                        >
+                                                                            <div
+                                                                                className="w-1 rounded-l-lg mr-3 flex-shrink-0"
+                                                                                style={{ backgroundColor: FACULTY_COLORS[unit.faculty] || '#999' }}
+                                                                            />
+                                                                            <div className="flex-1 min-w-0 overflow-hidden">
+                                                                                <div className="font-bold text-gray-800 text-sm">{unit.code}</div>
+                                                                                <div className="text-xs text-gray-600 line-clamp-2">{unit.name}</div>
+                                                                                {!isUnitOffered(unit, semester.semesterType) && (
+                                                                                    <div className="text-xs text-red-600 mt-1">
+                                                                                        ⚠️ Not offered {semester.semesterType}
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                            <button
+                                                                                onClick={() => removeUnit(semester.id, unitIdx)}
+                                                                                className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition flex-shrink-0"
+                                                                            >
+                                                                                <X />
+                                                                            </button>
+                                                                            
+                                                                            {hoveredUnit && hoveredUnit.code === unit.code && (
+                                                                                <div
+                                                                                    className="absolute z-50 bg-gray-800 text-white p-2 rounded shadow-lg text-xs -bottom-10 left-0 whitespace-nowrap"
+                                                                                    onMouseEnter={handlePopupEnter}
+                                                                                    onMouseLeave={handlePopupLeave}
+                                                                                >
+                                                                                    <a
+                                                                                        href={`https://handbook.monash.edu/2026/units/${unit.code}`}
+                                                                                        target="_blank"
+                                                                                        rel="noopener noreferrer"
+                                                                                        className="hover:underline"
+                                                                                    >
+                                                                                        View in Handbook →
+                                                                                    </a>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="h-24 border-2 border-dashed border-gray-200 rounded-lg flex items-center justify-center text-gray-400 text-xs w-full">
+                                                                            Drop unit here
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}    
+                                        </tbody>
+                                    </table>
+                                    
+                                    <div className="p-4 bg-gray-50 border-t border-gray-300 flex justify-center">
+                                        <button
+                                            onClick={addSemester}
+                                            className="flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition font-semibold"
+                                        >
+                                            <Plus />
+                                            Add Semester
+                                        </button>
+                                    </div>
                             </div>
                         </div>
                     </div>
@@ -657,7 +928,8 @@
             );
         };
         
-        ReactDOM.render(<MonashCoursePlanner />, document.getElementById('root'));
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<MonashCoursePlanner />);
     </script>
 </body>
 </html>
