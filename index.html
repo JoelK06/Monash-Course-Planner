@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monash Course Planner</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        
+        const UNITS_CSV_URL = 'https://raw.githubusercontent.com/JoelK06/Monash-units/refs/heads/main/monash_units_complete.csv';
+        
+        const FACULTY_COLORS = {
+            "Business & Economics": "#FF6B35",
+            "Engineering": "#F7931E",
+            "Science": "#4ECDC4",
+            "Arts": "#95E1D3",
+            "Medicine": "#C44569",
+            "IT": "#5F27CD",
+            "Law": "#222F3E",
+            "Education": "#FEE140",
+            "Pharmacy": "#A8E6CF",
+            "Art, Design & Architecture": "#FFD3B6",
+        };
+        
+        // Icon components
+        const Search = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
+            </svg>
+        );
+        
+        const Plus = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+        );
+        
+        const Download = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+        );
+        
+        const X = () => (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+        );
+        
+        const Loader = () => (
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="animate-spin">
+                <line x1="12" y1="2" x2="12" y2="6"></line>
+                <line x1="12" y1="18" x2="12" y2="22"></line>
+                <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line>
+                <line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line>
+                <line x1="2" y1="12" x2="6" y2="12"></line>
+                <line x1="18" y1="12" x2="22" y2="12"></line>
+                <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line>
+                <line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line>
+            </svg>
+        );
+        
+        const MonashCoursePlanner = () => {
+            const [showLanding, setShowLanding] = useState(true);
+            const [showSetup, setShowSetup] = useState(false);
+            const [loading, setLoading] = useState(false);
+            const [unitsData, setUnitsData] = useState([]);
+            const [startYear, setStartYear] = useState(2025);
+            const [degreeLength, setDegreeLength] = useState(4);
+            const [semesters, setSemesters] = useState([]);
+            const [selectedFaculty, setSelectedFaculty] = useState(null);
+            const [searchQuery, setSearchQuery] = useState('');
+            const [draggedUnit, setDraggedUnit] = useState(null);
+            const [hoveredUnit, setHoveredUnit] = useState(null);
+            const [hoverTimeout, setHoverTimeout] = useState(null);
+            
+            useEffect(() => {
+                const loadUnits = async () => {
+                    const cached = localStorage.getItem('monashUnitsData');
+                    const cacheTimestamp = localStorage.getItem('monashUnitsCacheTime');
+                    const oneWeek = 7 * 24 * 60 * 60 * 1000;
+                    
+                    if (cached && cacheTimestamp && (Date.now() - parseInt(cacheTimestamp) < oneWeek)) {
+                        setUnitsData(JSON.parse(cached));
+                        return;
+                    }
+                    
+                    setLoading(true);
+                    try {
+                        const response = await fetch(UNITS_CSV_URL);
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        const text = await response.text();
+                        
+                        const lines = text.trim().split('\n');
+                        
+                        const units = lines.slice(1)
+                            .filter(line => line.trim())
+                            .map(line => {
+                                const regex = /(?:,|^)("(?:[^"]|"")*"|[^,]*)/g;
+                                const values = [];
+                                let match;
+                                while ((match = regex.exec(line)) !== null) {
+                                    if (match[1]) {
+                                        values.push(match[1].replace(/^"|"$/g, '').replace(/""/g, '"').trim());
+                                    }
+                                }
+                                
+                                return {
+                                    code: values[0] || '',
+                                    name: values[1] || '',
+                                    level: values[2] || '',
+                                    semesters: values[3] || '',
+                                    faculty: values[4] || ''
+                                };
+                            })
+                            .filter(unit => unit.code && unit.code !== 'code');
+                        
+                        setUnitsData(units);
+                        localStorage.setItem('monashUnitsData', JSON.stringify(units));
+                        localStorage.setItem('monashUnitsCacheTime', Date.now().toString());
+                    } catch (error) {
+                        console.error('Error loading units:', error);
+                        alert('Failed to load units data: ' + error.message);
+                    } finally {
+                        setLoading(false);
+                    }
+                };
+                
+                loadUnits();
+            }, []);
+            
+            useEffect(() => {
+                const saved = localStorage.getItem('monashCoursePlan');
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    setStartYear(data.startYear);
+                    setDegreeLength(data.degreeLength);
+                    setSemesters(data.semesters);
+                    setShowLanding(false);
+                }
+            }, []);
+            
+            useEffect(() => {
+                if (semesters.length > 0) {
+                    localStorage.setItem('monashCoursePlan', JSON.stringify({
+                        startYear,
+                        degreeLength,
+                        semesters
+                    }));
+                }
+            }, [semesters, startYear, degreeLength]);
+            
+            const handleStartNew = () => {
+                setShowLanding(false);
+                setShowSetup(true);
+            };
+            
+            const handleLoadCourse = () => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.json';
+                input.onchange = (e) => {
+                    const file = e.target.files[0];
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const data = JSON.parse(event.target.result);
+                        setStartYear(data.startYear);
+                        setDegreeLength(data.degreeLength);
+                        setSemesters(data.semesters);
+                        setShowLanding(false);
+                    };
+                    reader.readAsText(file);
+                };
+                input.click();
+            };
+            
+            const handleSetupComplete = () => {
+                const newSemesters = [];
+                for (let year = 0; year < degreeLength; year++) {
+                    newSemesters.push({
+                        id: `s1-${year}`,
+                        label: `Semester 1, ${startYear + year}`,
+                        semesterType: 'Semester 1',
+                        units: [null, null, null, null]
+                    });
+                    newSemesters.push({
+                        id: `s2-${year}`,
+                        label: `Semester 2, ${startYear + year}`,
+                        semesterType: 'Semester 2',
+                        units: [null, null, null, null]
+                    });
+                }
+                setSemesters(newSemesters);
+                setShowSetup(false);
+            };
+            
+            const addSemester = () => {
+                const lastSem = semesters[semesters.length - 1];
+                const lastYear = parseInt(lastSem.label.split(', ')[1]);
+                const isS1 = lastSem.semesterType === 'Semester 1';
+                const newYear = isS1 ? lastYear : lastYear + 1;
+                const newSemType = isS1 ? 'Semester 2' : 'Semester 1';
+                
+                setSemesters([...semesters, {
+                    id: `${newSemType.toLowerCase().replace(' ', '')}-${Date.now()}`,
+                    label: `${newSemType}, ${newYear}`,
+                    semesterType: newSemType,
+                    units: [null, null, null, null]
+                }]);
+            };
+            
+            const removeSemester = () => {
+                if (semesters.length > 1) {
+                    setSemesters(semesters.slice(0, -1));
+                }
+            };
+            
+            const handleDragStart = (unit) => {
+                setDraggedUnit(unit);
+            };
+            
+            const handleDrop = (semesterId, unitIndex) => {
+                if (!draggedUnit) return;
+                
+                const newSemesters = [...semesters];
+                const semIndex = newSemesters.findIndex(s => s.id === semesterId);
+                
+                const fromSemIndex = newSemesters.findIndex(s =>
+                    s.units.some(u => u && u.code === draggedUnit.code)
+                );
+                
+                if (fromSemIndex !== -1) {
+                    const fromUnitIndex = newSemesters[fromSemIndex].units.findIndex(u =>
+                        u && u.code === draggedUnit.code
+                    );
+                    
+                    const temp = newSemesters[semIndex].units[unitIndex];
+                    newSemesters[semIndex].units[unitIndex] = draggedUnit;
+                    newSemesters[fromSemIndex].units[fromUnitIndex] = temp;
+                } else {
+                    newSemesters[semIndex].units[unitIndex] = draggedUnit;
+                }
+                
+                setSemesters(newSemesters);
+                setDraggedUnit(null);
+            };
+            
+            const removeUnit = (semesterId, unitIndex) => {
+                const newSemesters = [...semesters];
+                const semIndex = newSemesters.findIndex(s => s.id === semesterId);
+                newSemesters[semIndex].units[unitIndex] = null;
+                setSemesters(newSemesters);
+            };
+            
+            const exportPlan = () => {
+                const dataStr = JSON.stringify({ startYear, degreeLength, semesters }, null, 2);
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(dataBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `monash-course-plan-${startYear}.json`;
+                link.click();
+            };
+            
+            const faculties = [...new Set(unitsData.map(u => u.faculty))].filter(Boolean).sort();
+            const filteredUnits = searchQuery
+                ? unitsData.filter(u =>
+                    u.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    u.name.toLowerCase().includes(searchQuery.toLowerCase())
+                  )
+                : selectedFaculty
+                ? unitsData.filter(u => u.faculty === selectedFaculty)
+                : [];
+            
+            const isUnitOffered = (unit, semesterType) => {
+                if (!unit) return true;
+                return unit.semesters.includes(semesterType);
+            };
+            
+            const handleMouseEnter = (unit) => {
+                const timeout = setTimeout(() => {
+                    setHoveredUnit(unit);
+                }, 800);
+                setHoverTimeout(timeout);
+            };
+            
+            const handleMouseLeave = () => {
+                if (hoverTimeout) clearTimeout(hoverTimeout);
+                const timeout = setTimeout(() => {
+                    setHoveredUnit(null);
+                }, 300);
+                setHoverTimeout(timeout);
+            };
+            
+            const handlePopupEnter = () => {
+                if (hoverTimeout) clearTimeout(hoverTimeout);
+            };
+            
+            const handlePopupLeave = () => {
+                setHoveredUnit(null);
+            };
+            
+            if (loading) {
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+                        <div className="bg-white rounded-2xl shadow-2xl p-12 text-center">
+                            <div className="mx-auto mb-4"><Loader /></div>
+                            <h2 className="text-2xl font-bold text-gray-800">Loading Monash Units...</h2>
+                            <p className="text-gray-600 mt-2">Fetching 5000+ units from database</p>
+                        </div>
+                    </div>
+                );
+            }
+            
+            if (showLanding) {
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-8">
+                        <div className="bg-white rounded-2xl shadow-2xl p-12 max-w-2xl">
+                            <h1 className="text-4xl font-bold text-gray-800 mb-6">Monash Course Planner</h1>
+                            <div className="bg-blue-50 border-l-4 border-blue-500 p-6 mb-8 rounded">
+                                <h2 className="font-bold text-lg mb-3">Instructions:</h2>
+                                <ul className="space-y-2 text-gray-700">
+                                    <li>• Plan your entire Monash degree with drag-and-drop simplicity</li>
+                                    <li>• Contains 5000+ units from the Monash handbook</li>
+                                    <li>• Drag units from the sidebar into your semester grid</li>
+                                    <li>• Right-click the last semester to remove it</li>
+                                    <li>• Your plan auto-saves in your browser</li>
+                                    <li>• Always check the handbook before making final decisions</li>
+                                </ul>
+                            </div>
+                            <div className="flex gap-4">
+                                <button
+                                    onClick={handleStartNew}
+                                    className="flex-1 bg-blue-600 text-white py-4 px-6 rounded-lg font-semibold hover:bg-blue-700 transition"
+                                >
+                                    Start New Plan
+                                </button>
+                                <button
+                                    onClick={handleLoadCourse}
+                                    className="flex-1 bg-gray-600 text-white py-4 px-6 rounded-lg font-semibold hover:bg-gray-700 transition"
+                                >
+                                    Load Course
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+            
+            if (showSetup) {
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-8">
+                        <div className="bg-white rounded-2xl shadow-2xl p-12 max-w-md">
+                            <h2 className="text-3xl font-bold text-gray-800 mb-8">Setup Your Plan</h2>
+                            <div className="space-y-6">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Start Year
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={startYear}
+                                        onChange={(e) => setStartYear(parseInt(e.target.value))}
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Degree Length (years)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={degreeLength}
+                                        onChange={(e) => setDegreeLength(parseInt(e.target.value))}
+                                        min="1"
+                                        max="12"
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    />
+                                </div>
+                                <button
+                                    onClick={handleSetupComplete}
+                                    className="w-full bg-blue-600 text-white py-4 rounded-lg font-semibold hover:bg-blue-700 transition"
+                                >
+                                    Create Plan
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+            
+            return (
+                <div className="flex h-screen bg-gray-50">
+                    <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
+                        <div className="p-4 border-b border-gray-200">
+                            <h2 className="text-xl font-bold text-gray-800 mb-4">Unit Library</h2>
+                            <div className="relative">
+                                <div className="absolute left-3 top-3 text-gray-400"><Search /></div>
+                                <input
+                                    type="text"
+                                    placeholder="Search units..."
+                                    value={searchQuery}
+                                    onChange={(e) => {
+                                        setSearchQuery(e.target.value);
+                                        setSelectedFaculty(null);
+                                    }}
+                                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                />
+                            </div>
+                        </div>
+                        
+                        <div className="flex-1 overflow-y-auto p-4">
+                            {!searchQuery && !selectedFaculty && (
+                                <div className="space-y-2">
+                                    {faculties.map(faculty => (
+                                        <button
+                                            key={faculty}
+                                            onClick={() => setSelectedFaculty(faculty)}
+                                            className="w-full text-left px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg font-medium text-gray-700 transition"
+                                        >
+                                            {faculty}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                            
+                            {(searchQuery || selectedFaculty) && (
+                                <div>
+                                    {selectedFaculty && (
+                                        <button
+                                            onClick={() => setSelectedFaculty(null)}
+                                            className="mb-4 text-sm text-blue-600 hover:text-blue-800"
+                                        >
+                                            ← Back to faculties
+                                        </button>
+                                    )}
+                                    <div className="space-y-2">
+                                        {filteredUnits.length === 0 ? (
+                                            <div className="text-center text-gray-500 py-8">
+                                                No units found
+                                            </div>
+                                        ) : (
+                                            filteredUnits.map(unit => (
+                                                <div
+                                                    key={unit.code}
+                                                    draggable
+                                                    onDragStart={() => handleDragStart(unit)}
+                                                    className="bg-white border border-gray-200 rounded-lg p-3 cursor-move hover:shadow-md transition flex"
+                                                >
+                                                    <div
+                                                        className="w-1 rounded-l-lg mr-3"
+                                                        style={{ backgroundColor: FACULTY_COLORS[unit.faculty] || '#999' }}
+                                                    />
+                                                    <div className="flex-1">
+                                                        <div className="font-bold text-gray-800">{unit.code}</div>
+                                                        <div className="text-sm text-gray-600">{unit.name}</div>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                    
+                    <div className="flex-1 flex flex-col">
+                        <div className="bg-white border-b border-gray-200 p-4 flex justify-between items-center">
+                            <h1 className="text-2xl font-bold text-gray-800">My Course Plan</h1>
+                            <button
+                                onClick={exportPlan}
+                                className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+                            >
+                                <Download />
+                                Export Plan
+                            </button>
+                        </div>
+                        
+                        <div className="flex-1 overflow-auto p-8">
+                            <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+                                <table className="w-full border-collapse">
+                                    <thead>
+                                        <tr className="bg-gray-100">
+                                            <th className="border border-gray-300 p-3 text-left font-semibold w-48">Semester</th>
+                                            <th className="border border-gray-300 p-3 text-center font-semibold">Unit 1</th>
+                                            <th className="border border-gray-300 p-3 text-center font-semibold">Unit 2</th>
+                                            <th className="border border-gray-300 p-3 text-center font-semibold">Unit 3</th>
+                                            <th className="border border-gray-300 p-3 text-center font-semibold">Unit 4</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {semesters.map((semester, semIdx) => (
+                                            <tr key={semester.id}>
+                                                <td
+                                                    className="border border-gray-300 p-3 font-medium bg-gray-50"
+                                                    onContextMenu={(e) => {
+                                                        if (semIdx === semesters.length - 1) {
+                                                            e.preventDefault();
+                                                            removeSemester();
+                                                        }
+                                                    }}
+                                                >
+                                                    {semester.label}
+                                                </td>
+                                                {semester.units.map((unit, unitIdx) => (
+                                                    <td
+                                                        key={unitIdx}
+                                                        className="border border-gray-300 p-2 align-top"
+                                                        onDragOver={(e) => e.preventDefault()}
+                                                        onDrop={() => handleDrop(semester.id, unitIdx)}
+                                                    >
+                                                        {unit ? (
+                                                            <div
+                                                                className="relative bg-white border border-gray-200 rounded-lg p-3 min-h-24 flex group"
+                                                                draggable
+                                                                onDragStart={() => handleDragStart(unit)}
+                                                                onMouseEnter={() => handleMouseEnter(unit)}
+                                                                onMouseLeave={handleMouseLeave}
+                                                            >
+                                                                <div
+                                                                    className="w-1 rounded-l-lg mr-3"
+                                                                    style={{ backgroundColor: FACULTY_COLORS[unit.faculty] || '#999' }}
+                                                                />
+                                                                <div className="flex-1">
+                                                                    <div className="font-bold text-gray-800">{unit.code}</div>
+                                                                    <div className="text-sm text-gray-600">{unit.name}</div>
+                                                                    {!isUnitOffered(unit, semester.semesterType) && (
+                                                                        <div className="text-xs text-red-600 mt-1">
+                                                                            ⚠️ Not offered {semester.semesterType}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                                <button
+                                                                    onClick={() => removeUnit(semester.id, unitIdx)}
+                                                                    className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition"
+                                                                >
+                                                                    <X />
+                                                                </button>
+                                                                
+                                                                {hoveredUnit && hoveredUnit.code === unit.code && (
+                                                                    <div
+                                                                        className="absolute z-50 bg-gray-800 text-white p-2 rounded shadow-lg text-xs -bottom-10 left-0 whitespace-nowrap"
+                                                                        onMouseEnter={handlePopupEnter}
+                                                                        onMouseLeave={handlePopupLeave}
+                                                                    >
+                                                                        <a
+                                                                            href={`https://handbook.monash.edu/2026/units/${unit.code}`}
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            className="hover:underline"
+                                                                        >
+                                                                            View in Handbook →
+                                                                        </a>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        ) : (
+                                                            <div className="min-h-24 border-2 border-dashed border-gray-200 rounded-lg flex items-center justify-center text-gray-400 text-sm">
+                                                                Drop unit here
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                ))}
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                                
+                                <div className="p-4 bg-gray-50 border-t border-gray-300 flex justify-center">
+                                    <button
+                                        onClick={addSemester}
+                                        className="flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition font-semibold"
+                                    >
+                                        <Plus />
+                                        Add Semester
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+        
+        ReactDOM.render(<MonashCoursePlanner />, document.getElementById('root'));
+    </script>
+</body>
+</html>
