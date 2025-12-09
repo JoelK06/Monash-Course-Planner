@@ -61,6 +61,29 @@
                 <line x1="12" y1="15" x2="12" y2="3"></line>
             </svg>
         );
+
+       const Info = () => (
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="12" y1="23" x2="12" y2="10" stroke-width="3"></line>
+                <circle cx="12" cy="5" r="1"></circle>
+            </svg>
+        );
+
+        const Bug = () => (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="m8 2 1.88 1.88"></path>
+                <path d="M14.12 3.88 16 2"></path>
+                <path d="M9 7.13v-1a3.003 3.003 0 1 1 6 0v1"></path>
+                <path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"></path>
+                <path d="M12 20v-9"></path>
+                <path d="M6.53 9C4.6 8.8 3 7.1 3 5"></path>
+                <path d="M6 13H2"></path>
+                <path d="M3 21c0-2.1 1.7-3.9 3.8-4"></path>
+                <path d="M20.97 5c0 2.1-1.6 3.8-3.5 4"></path>
+                <path d="M22 13h-4"></path>
+                <path d="M17.2 17c2.1.1 3.8 1.9 3.8 4"></path>
+            </svg>
+        );
         
         const Upload = () => (
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -110,6 +133,9 @@
             const [selectedUnit, setSelectedUnit] = useState(null);
             const [selectedFromSidebar, setSelectedFromSidebar] = useState(false);
             const [isMobile, setIsMobile] = useState(false);
+            const [showInfoModal, setShowInfoModal] = useState(false);
+            const [editingPlanId, setEditingPlanId] = useState(null);
+            const [editingPlanName, setEditingPlanName] = useState('');
             
             useEffect(() => {
                 const checkMobile = () => {
@@ -215,6 +241,7 @@
                 localStorage.setItem('monashLastPlanId', planId);
             };
             
+            
             const updateCurrentPlan = (newSemesters, newStartYear, newDegreeLength) => {
                 const updatedPlans = plans.map(p => 
                     p.id === currentPlanId 
@@ -230,6 +257,34 @@
                 }
             }, [semesters]);
             
+            const renamePlan = (planId, newName) => {
+                if (!newName.trim()) return;
+                
+                const updatedPlans = plans.map(p => 
+                    p.id === planId ? { ...p, name: newName.trim() } : p
+                );
+                savePlans(updatedPlans, currentPlanId);
+            };
+
+            const handlePlanDoubleClick = (plan) => {
+                setEditingPlanId(plan.id);
+                setEditingPlanName(plan.name);
+            };
+
+            const handleRenameKeyDown = (e, planId) => {
+                if (e.key === 'Enter') {
+                    renamePlan(planId, editingPlanName);
+                    setEditingPlanId(null);
+                } else if (e.key === 'Escape') {
+                    setEditingPlanId(null);
+                }
+            };
+
+            const handleRenameBlur = (planId) => {
+                renamePlan(planId, editingPlanName);
+                setEditingPlanId(null);
+            };
+
             const handleStartNew = () => {
                 setShowLanding(false);
                 setShowSetup(true);
@@ -318,11 +373,41 @@
                     const file = e.target.files[0];
                     const reader = new FileReader();
                     reader.onload = (event) => {
-                        const data = JSON.parse(event.target.result);
-                        setStartYear(data.startYear);
-                        setDegreeLength(data.degreeLength);
-                        setSemesters(data.semesters);
-                        setShowLanding(false);
+                        try {
+                            const data = JSON.parse(event.target.result);
+                            
+                            // Create a new plan with the loaded data
+                            const fileName = file.name.replace('.json', '').replace(/[-_]/g, ' ');
+                            const planName = data.name || fileName || `Loaded Plan`;
+                            
+                            const newPlan = {
+                                id: 'plan-' + Date.now(),
+                                name: planName,
+                                startYear: data.startYear || 2025,
+                                degreeLength: data.degreeLength || 4,
+                                semesters: data.semesters || []
+                            };
+                            
+                            // Ensure semesters have the right structure
+                            const validSemesters = newPlan.semesters.map(sem => ({
+                                ...sem,
+                                units: Array.isArray(sem.units) ? sem.units : [null, null, null, null],
+                                isAcademicLeave: sem.isAcademicLeave || false
+                            }));
+                            newPlan.semesters = validSemesters;
+                            
+                            const updatedPlans = [...plans, newPlan];
+                            savePlans(updatedPlans, newPlan.id);
+                            setCurrentPlanId(newPlan.id);
+                            setStartYear(newPlan.startYear);
+                            setDegreeLength(newPlan.degreeLength);
+                            setSemesters(validSemesters);
+                            setShowLanding(false);
+                            
+                        } catch (error) {
+                            console.error('Error loading plan:', error);
+                            alert('Failed to load plan. Please make sure it\'s a valid course plan file.');
+                        }
                     };
                     reader.readAsText(file);
                 };
@@ -337,14 +422,40 @@
                     const file = e.target.files[0];
                     const reader = new FileReader();
                     reader.onload = (event) => {
-                        const data = JSON.parse(event.target.result);
-                        const validSemesters = data.semesters.map(sem => ({
-                            ...sem,
-                            units: Array.isArray(sem.units) ? sem.units : [null, null, null, null]
-                        }));
-                        setSemesters(validSemesters);
-                        setStartYear(data.startYear);
-                        setDegreeLength(data.degreeLength);
+                        try {
+                            const data = JSON.parse(event.target.result);
+                            
+                            // Create a new plan with the imported data
+                            const fileName = file.name.replace('.json', '').replace(/[-_]/g, ' ');
+                            const planName = data.name || fileName || `Imported Plan`;
+                            
+                            const newPlan = {
+                                id: 'plan-' + Date.now(),
+                                name: planName,
+                                startYear: data.startYear || 2025,
+                                degreeLength: data.degreeLength || 4,
+                                semesters: data.semesters || []
+                            };
+                            
+                            // Ensure semesters have the right structure
+                            const validSemesters = newPlan.semesters.map(sem => ({
+                                ...sem,
+                                units: Array.isArray(sem.units) ? sem.units : [null, null, null, null],
+                                isAcademicLeave: sem.isAcademicLeave || false
+                            }));
+                            newPlan.semesters = validSemesters;
+                            
+                            const updatedPlans = [...plans, newPlan];
+                            savePlans(updatedPlans, newPlan.id);
+                            setCurrentPlanId(newPlan.id);
+                            setStartYear(newPlan.startYear);
+                            setDegreeLength(newPlan.degreeLength);
+                            setSemesters(validSemesters);
+                            
+                        } catch (error) {
+                            console.error('Error importing plan:', error);
+                            alert('Failed to import plan. Please make sure it\'s a valid course plan file.');
+                        }
                     };
                     reader.readAsText(file);
                 };
@@ -623,6 +734,42 @@
                 setHoveredUnit(null);
             };
             
+            const InfoModal = () => (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
+                    <div className="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[80vh] overflow-y-auto">
+                        <div className="p-6">
+                            <div className="flex justify-between items-start mb-4">
+                                <h2 className="text-2xl font-bold text-gray-800">About Monash Course Planner</h2>
+                                <button
+                                    onClick={() => setShowInfoModal(false)}
+                                    className="text-gray-500 hover:text-gray-700 text-2xl"
+                                >
+                                    ×
+                                </button>
+                            </div>
+                            <div className="text-gray-700 space-y-4">
+                                <p>This project was born due to the official Mon Planner being outdated and not including new units (The combination of Mech Aero and Mechatronic engineering units). It was first developed as an excel spreadsheet using lookup tables then later developed into this git hub page where it is free for anyone to use.</p>
+                                <p>The hope is that it may help make someone's course planning just a little easier. Note that as this was a quick project it does not consider credit points, prohibitions, prerequisites, and other such details. The one thing it does do is consider what units run in which semesters, which is helpful for degrees where many units only run once a year.</p>
+                                <p>Thank you for using my program!</p>
+                                <p className="font-semibold">Created by Joel Knight</p>
+                            </div>
+                            <div className="mt-6 pt-6 border-t border-gray-200">
+                                <button
+                                    onClick={() => {
+                                        window.open('https://github.com/JoelK06/Monash-Course-Planner/issues', '_blank');
+                                        setShowInfoModal(false);
+                                    }}
+                                    className="flex items-center gap-2 border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition w-full justify-center"
+                                >
+                                    <Bug />
+                                    Report Bugs on GitHub
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+
             if (loading) {
                 return (
                     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
@@ -790,32 +937,63 @@
                     </div>
                     
                     <div className="flex-1 flex flex-col">
-                        {/* ADDED: Title header with subtitle */}
                         <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-4 relative z-10">
                             <div className="flex items-center justify-between">
-                                <h1 className="text-2xl font-bold text-white">Monash Course Planner</h1>
-                                <div className="text-blue-100 text-sm">by Joel K</div>
+                                <div className="flex items-center gap-3">
+                                    <h1 className="text-2xl font-bold text-white">Monash Course Planner</h1>
+                                    <button
+                                        onClick={() => setShowInfoModal(true)}
+                                        className="text-white hover:text-blue-100 transition border border-white/50 rounded-full p-1 hover:bg-white/10"
+                                        title="About this project"
+                                    >
+                                        <Info />
+                                    </button>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <button
+                                        onClick={() => window.open('https://github.com/JoelK06/Monash-Course-Planner/issues', '_blank')}
+                                        className="flex items-center gap-2 border border-white/50 text-white px-3 py-1 rounded-lg hover:bg-white/10 transition text-sm"
+                                    >
+                                        <Bug />
+                                        Report Bugs
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         
                         <div className="bg-white border-b border-gray-200 p-4 flex justify-between items-center flex-shrink-0">
                             <div className="flex items-center gap-2">
                                 {plans.map(plan => (
-                                    <button
-                                        key={plan.id}
-                                        onClick={() => switchPlan(plan.id)}
-                                        className={`px-4 py-2 rounded-lg font-medium transition ${
-                                            plan.id === currentPlanId
-                                                ? 'bg-blue-600 text-white'
-                                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                                        }`}
-                                    >
-                                        {plan.name}
-                                    </button>
+                                    editingPlanId === plan.id ? (
+                                        <input
+                                            key={plan.id}
+                                            type="text"
+                                            value={editingPlanName}
+                                            onChange={(e) => setEditingPlanName(e.target.value)}
+                                            onKeyDown={(e) => handleRenameKeyDown(e, plan.id)}
+                                            onBlur={() => handleRenameBlur(plan.id)}
+                                            className="px-4 py-2 rounded-lg border border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-32"
+                                            autoFocus
+                                        />
+                                    ) : (
+                                        <button
+                                            key={plan.id}
+                                            onClick={() => switchPlan(plan.id)}
+                                            onDoubleClick={() => handlePlanDoubleClick(plan)}
+                                            className={`px-4 py-2 rounded-lg font-medium transition ${
+                                                plan.id === currentPlanId
+                                                    ? 'bg-blue-600 text-white'
+                                                    : 'border border-blue-600 text-blue-600 bg-white hover:bg-blue-50'
+                                            }`}
+                                            title="Double-click to rename"
+                                        >
+                                            {plan.name}
+                                        </button>
+                                    )
                                 ))}
                                 <button
                                     onClick={createNewPlan}
-                                    className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 transition font-medium"
+                                    className="px-4 py-2 rounded-lg border border-blue-600 text-blue-600 bg-white hover:bg-blue-50 transition font-medium"
                                 >
                                     + New Plan
                                 </button>
@@ -823,26 +1001,26 @@
                             <div className="flex gap-2">
                                 <button
                                     onClick={clearCurrentPlan}
-                                    className="flex items-center gap-2 bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition"
+                                    className="flex items-center gap-2 border border-blue-600 text-blue-600 bg-white px-4 py-2 rounded-lg hover:bg-blue-50 transition"
                                 >
                                     Clear Plan
                                 </button>
                                 <button
                                     onClick={deletePlan}
-                                    className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition"
+                                    className="flex items-center gap-2 border border-red-600 text-red-600 bg-white px-4 py-2 rounded-lg hover:bg-red-50 transition"
                                 >
                                     Delete Plan
                                 </button>
                                 <button
                                     onClick={handleImportCourse}
-                                    className="flex items-center gap-2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition"
+                                    className="flex items-center gap-2 border border-blue-600 text-blue-600 bg-white px-4 py-2 rounded-lg hover:bg-blue-50 transition"
                                 >
                                     <Upload />
                                     Import
                                 </button>
                                 <button
                                     onClick={exportPlan}
-                                    className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+                                    className="flex items-center gap-2 border border-blue-600 text-blue-600 bg-white px-4 py-2 rounded-lg hover:bg-blue-50 transition"
                                 >
                                     <Download />
                                     Export
@@ -1024,7 +1202,7 @@
                                     <div className="p-4 bg-gray-50 border-t border-gray-300 flex justify-center">
                                         <button
                                             onClick={addSemester}
-                                            className="flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition font-semibold"
+                                            className="flex items-center gap-2 border border-gray-300 text-gray-700 bg-white px-6 py-3 rounded-lg hover:bg-gray-50 transition font-medium"
                                         >
                                             <Plus />
                                             Add Semester
@@ -1033,6 +1211,7 @@
                             </div>
                         </div>
                     </div>
+                    {showInfoModal && <InfoModal />}
                 </div>
             );
         };
