@@ -28,14 +28,15 @@
         const FACULTY_COLORS = {
             "Business & Economics": "#00bcd4",
             "Engineering": "#ff9800",
-            "Science": "#009688",
-            "Arts": "#b71c1c",
+            "Science": "#4caf50",
+            "Arts": "#e91e63",
             "Medicine": "#2196f3",
-            "IT": "#7b1fa2",
-            "Law": "#776c55",
-            "Education": "#b81b60",
-            "Pharmacy": "#7c8500",
-            "Art, Design & Architecture": "#455a64",
+            "IT": "#9c27b0",
+            "Law": "#795548",
+            "Education": "#f06292",
+            "Pharmacy": "#8bc34a",
+            "Art, Design & Architecture": "#607d8b",
+            "Unknown": "#0069a7"
         };
         
         // Icon components
@@ -106,6 +107,20 @@
             const [touchStartPos, setTouchStartPos] = useState(null);
             const [plans, setPlans] = useState([]);
             const [currentPlanId, setCurrentPlanId] = useState(null);
+            const [selectedUnit, setSelectedUnit] = useState(null);
+            const [selectedFromSidebar, setSelectedFromSidebar] = useState(false);
+            const [isMobile, setIsMobile] = useState(false);
+            
+            useEffect(() => {
+                const checkMobile = () => {
+                    // Check if device is mobile based on touch support and screen size
+                    const mobile = ('ontouchstart' in window || navigator.maxTouchPoints > 0) && window.innerWidth < 1024;
+                    setIsMobile(mobile);
+                };
+                checkMobile();
+                window.addEventListener('resize', checkMobile);
+                return () => window.removeEventListener('resize', checkMobile);
+            }, []);
             
             useEffect(() => {
                 const loadUnits = async () => {
@@ -435,6 +450,25 @@
             
             const handleDragStart = (unit) => {
                 setDraggedUnit(unit);
+                setSelectedUnit(null);
+                setSelectedFromSidebar(false);
+            };
+            
+            const handleUnitClick = (unit, isFromSidebar = false) => {
+                if (selectedUnit && selectedUnit.code === unit.code) {
+                    setSelectedUnit(null);
+                    setSelectedFromSidebar(false);
+                } else {
+                    setSelectedUnit(unit);
+                    setSelectedFromSidebar(isFromSidebar);
+                }
+            };
+            
+            const handleSlotClick = (semesterId, unitIndex) => {
+                if (selectedUnit) {
+                    handleDrop(semesterId, unitIndex);
+                    setSelectedUnit(null);
+                }
             };
             
             const handleTouchStart = (e, unit) => {
@@ -455,29 +489,64 @@
             };
             
             const handleDrop = (semesterId, unitIndex) => {
-                if (!draggedUnit) return;
+                const unitToPlace = draggedUnit || selectedUnit;
+                if (!unitToPlace) return;
                 
                 const newSemesters = [...semesters];
                 const semIndex = newSemesters.findIndex(s => s.id === semesterId);
                 
-                const fromSemIndex = newSemesters.findIndex(s =>
-                    s.units.some(u => u && u.code === draggedUnit.code)
-                );
+                // Check if we're moving from the grid (not from sidebar)
+                let fromSemIndex = -1;
+                let fromUnitIndex = -1;
                 
-                if (fromSemIndex !== -1) {
-                    const fromUnitIndex = newSemesters[fromSemIndex].units.findIndex(u =>
-                        u && u.code === draggedUnit.code
-                    );
+                // Check if unit has an instance ID (meaning it's from the grid)
+                const isFromGrid = unitToPlace._instanceId !== undefined;
+                
+                if (isFromGrid) {
+                    // Look for source using unique instance ID
+                    for (let i = 0; i < newSemesters.length; i++) {
+                        const foundIndex = newSemesters[i].units.findIndex(u => 
+                            u && u._instanceId === unitToPlace._instanceId
+                        );
+                        if (foundIndex !== -1) {
+                            fromSemIndex = i;
+                            fromUnitIndex = foundIndex;
+                            break;
+                        }
+                    }
                     
+                    // If moving to the same spot, do nothing
+                    if (fromSemIndex === semIndex && fromUnitIndex === unitIndex) {
+                        setDraggedUnit(null);
+                        setSelectedUnit(null);
+                        setSelectedFromSidebar(false);
+                        return;
+                    }
+                    
+                    // Moving from grid - swap positions
                     const temp = newSemesters[semIndex].units[unitIndex];
-                    newSemesters[semIndex].units[unitIndex] = draggedUnit;
+                    newSemesters[semIndex].units[unitIndex] = unitToPlace;
                     newSemesters[fromSemIndex].units[fromUnitIndex] = temp;
                 } else {
-                    newSemesters[semIndex].units[unitIndex] = draggedUnit;
+                    // Adding from sidebar - check if duplicate exists in this semester
+                    const duplicateIndex = newSemesters[semIndex].units.findIndex(
+                        (u, idx) => u && u.code === unitToPlace.code && idx !== unitIndex
+                    );
+                    
+                    if (duplicateIndex !== -1) {
+                        // Replace the existing duplicate instead of creating another
+                        newSemesters[semIndex].units[duplicateIndex] = null;
+                    }
+                    
+                    // Create a new instance with unique ID
+                    const newUnit = { ...unitToPlace, _instanceId: Date.now() + Math.random() };
+                    newSemesters[semIndex].units[unitIndex] = newUnit;
                 }
                 
                 setSemesters(newSemesters);
                 setDraggedUnit(null);
+                setSelectedUnit(null);
+                setSelectedFromSidebar(false);
             };
             
             const removeUnit = (semesterId, unitIndex) => {
@@ -512,6 +581,10 @@
                 : selectedFaculty
                 ? unitsData.filter(u => u.faculty === selectedFaculty)
                 : [];
+            
+            const hasDuplicateInSemester = (semester, unitCode) => {
+                return semester.units.filter(u => u && u.code === unitCode).length > 1;
+            };
             
             const isUnitOffered = (unit, semesterType) => {
                 if (!unit) return true;
@@ -684,11 +757,16 @@
                                                     onDragStart={() => handleDragStart(unit)}
                                                     onTouchStart={(e) => handleTouchStart(e, unit)}
                                                     onTouchMove={handleTouchMove}
-                                                    className="bg-white border border-gray-200 rounded-lg p-3 cursor-move hover:shadow-md transition flex touch-none"
+                                                    onClick={() => handleUnitClick(unit, true)}
+                                                    className={`bg-white border rounded-lg p-3 cursor-pointer hover:shadow-md transition flex touch-none ${
+                                                        selectedUnit && selectedUnit.code === unit.code
+                                                            ? 'border-blue-500 border-2 shadow-lg'
+                                                            : 'border-gray-200'
+                                                    }`}
                                                 >
                                                     <div
                                                         className="w-1 rounded-l-lg mr-3"
-                                                        style={{ backgroundColor: FACULTY_COLORS[unit.faculty] || '#999' }}
+                                                        style={{ backgroundColor: FACULTY_COLORS[unit.faculty] || FACULTY_COLORS["Unknown"] }}
                                                     />
                                                     <div className="flex-1">
                                                         <div className="font-bold text-gray-800">{unit.code}</div>
@@ -842,27 +920,32 @@
                                                                 <span className="text-yellow-700 font-semibold">Academic Leave</span>
                                                             </div>
                                                         ) : (
-                                                            <div className={'grid gap-2 grid-cols-' + semester.units.length}>
+                                                            <div className={isMobile ? 'grid gap-2 grid-cols-2' : 'grid gap-2 grid-cols-' + semester.units.length}>
                                                                 {semester.units.map((unit, unitIdx) => (
                                                                 <div
-                                                                    key={unitIdx}
+                                                                    key={unit?._instanceId || `empty-${unitIdx}`}
                                                                     className="flex"
                                                                     onDragOver={(e) => e.preventDefault()}
                                                                     onDrop={() => handleDrop(semester.id, unitIdx)}
                                                                     onTouchEnd={(e) => handleTouchEnd(e, semester.id, unitIdx)}
+                                                                    onClick={() => handleSlotClick(semester.id, unitIdx)}
                                                                 >
                                                                     {unit ? (
                                                                         <div
-                                                                            className="relative bg-white border border-gray-200 rounded-lg p-3 h-24 flex group w-full overflow-hidden"
+                                                                            className="relative bg-white border border-gray-200 rounded-lg p-3 h-24 flex group w-full overflow-hidden cursor-pointer"
                                                                             draggable
                                                                             onDragStart={() => handleDragStart(unit)}
                                                                             onTouchStart={(e) => handleTouchStart(e, unit)}
                                                                             onMouseEnter={() => handleMouseEnter(unit)}
                                                                             onMouseLeave={handleMouseLeave}
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                handleUnitClick(unit, false);
+                                                                            }}
                                                                         >
                                                                             <div
                                                                                 className="w-1 rounded-l-lg mr-3 flex-shrink-0"
-                                                                                style={{ backgroundColor: FACULTY_COLORS[unit.faculty] || '#999' }}
+                                                                                style={{ backgroundColor: FACULTY_COLORS[unit.faculty] || FACULTY_COLORS["Unknown"] }}
                                                                             />
                                                                             <div className="flex-1 min-w-0 overflow-hidden">
                                                                                 <div className="font-bold text-gray-800 text-sm">{unit.code}</div>
@@ -872,9 +955,17 @@
                                                                                         ⚠️ Not offered {semester.semesterType}
                                                                                     </div>
                                                                                 )}
+                                                                                {hasDuplicateInSemester(semester, unit.code) && (
+                                                                                    <div className="text-xs text-orange-600 mt-1">
+                                                                                        ⚠️ Duplicate in semester
+                                                                                    </div>
+                                                                                )}
                                                                             </div>
                                                                             <button
-                                                                                onClick={() => removeUnit(semester.id, unitIdx)}
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    removeUnit(semester.id, unitIdx);
+                                                                                }}
                                                                                 className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition flex-shrink-0"
                                                                             >
                                                                                 <X />
@@ -898,8 +989,10 @@
                                                                             )}
                                                                         </div>
                                                                     ) : (
-                                                                        <div className="h-24 border-2 border-dashed border-gray-200 rounded-lg flex items-center justify-center text-gray-400 text-xs w-full">
-                                                                            Drop unit here
+                                                                        <div className={`h-24 border-2 border-dashed rounded-lg flex items-center justify-center text-gray-400 text-xs w-full cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition ${
+                                                                            selectedUnit ? 'border-blue-300 bg-blue-50' : 'border-gray-200'
+                                                                        }`}>
+                                                                            {selectedUnit ? 'Click to place unit' : 'Drop unit here'}
                                                                         </div>
                                                                     )}
                                                                 </div>
