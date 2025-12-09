@@ -774,7 +774,7 @@
             if (loading) {
                 return (
                     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-                        <div className="bg-white rounded-2xl shadow-2xl p-12 text-center">
+                        <div className="bg-white shadow-2xl p-12 text-center">
                             <div className="mx-auto mb-4"><Loader /></div>
                             <h2 className="text-2xl font-bold text-gray-800">Loading Monash Units...</h2>
                             <p className="text-gray-600 mt-2">Fetching 5000+ units from database</p>
@@ -786,9 +786,9 @@
             if (showLanding) {
                 return (
                     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-8">
-                        <div className="bg-white rounded-2xl shadow-2xl p-12 max-w-2xl">
+                        <div className="bg-white shadow-2xl p-12 max-w-2xl">
                             <h1 className="text-4xl font-bold text-gray-800 mb-6">Monash Course Planner</h1>
-                            <div className="bg-blue-50 border-l-4 border-blue-500 p-6 mb-8 rounded">
+                            <div className="bg-blue-50 border-l-4 border-blue-500 p-6 mb-8">
                                 <h2 className="font-bold text-lg mb-3">Instructions:</h2>
                                 <ul className="space-y-2 text-gray-700">
                                     <li>• Plan your entire Monash degree with drag-and-drop simplicity</li>
@@ -803,7 +803,7 @@
                             <div className="flex gap-4">
                                 <button
                                     onClick={handleStartNew}
-                                    className="flex-1 bg-blue-600 text-white py-4 px-6 rounded-lg font-semibold hover:bg-blue-700 transition"
+                                    className="flex-1 bg-blue-600 text-white py-4 px-6 font-semibold hover:bg-blue-700 transition"
                                 >
                                     Start New Plan
                                 </button>
@@ -816,7 +816,7 @@
             if (showSetup) {
                 return (
                     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-8">
-                        <div className="bg-white rounded-2xl shadow-2xl p-12 max-w-md">
+                        <div className="bg-white shadow-2xl p-12 max-w-md">
                             <h2 className="text-3xl font-bold text-gray-800 mb-8">Setup Your Plan</h2>
                             <div className="space-y-6">
                                 <div>
@@ -827,7 +827,7 @@
                                         type="number"
                                         value={startYear}
                                         onChange={(e) => setStartYear(parseInt(e.target.value))}
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        className="w-full px-4 py-3 border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     />
                                 </div>
                                 <div>
@@ -840,12 +840,12 @@
                                         onChange={(e) => setDegreeLength(parseInt(e.target.value))}
                                         min="1"
                                         max="12"
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        className="w-full px-4 py-3 border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     />
                                 </div>
                                 <button
                                     onClick={handleSetupComplete}
-                                    className="w-full bg-blue-600 text-white py-4 rounded-lg font-semibold hover:bg-blue-700 transition"
+                                    className="w-full bg-blue-600 text-white py-4 font-semibold hover:bg-blue-700 transition"
                                 >
                                     Create Plan
                                 </button>
@@ -882,7 +882,7 @@
                                         <button
                                             key={faculty}
                                             onClick={() => setSelectedFaculty(faculty)}
-                                            className="w-full text-left px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg font-medium text-gray-700 transition"
+                                            className="w-full text-left px-4 py-3 bg-gray-50 hover:bg-gray-100 font-medium text-gray-700 transition"
                                         >
                                             {faculty}
                                         </button>
@@ -1030,7 +1030,7 @@
                         </div>
                         
                         <div className="flex-1 overflow-auto p-8 relative">
-                            <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+                            <div className="bg-white shadow-lg overflow-hidden">
                                 <table className="w-full border-collapse" style={{ minWidth: '900px' }}>
                                         <thead>
                                             <tr className="bg-gray-100">
