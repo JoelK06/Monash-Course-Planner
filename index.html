@@ -18,16 +18,16 @@
         const UNITS_CSV_URL = 'https://raw.githubusercontent.com/JoelK06/Monash-units/refs/heads/main/monash_units_complete.csv';
         
         const FACULTY_COLORS = {
-            "Business & Economics": "#FF6B35",
-            "Engineering": "#F7931E",
-            "Science": "#4ECDC4",
-            "Arts": "#95E1D3",
-            "Medicine": "#C44569",
-            "IT": "#5F27CD",
-            "Law": "#222F3E",
-            "Education": "#FEE140",
-            "Pharmacy": "#A8E6CF",
-            "Art, Design & Architecture": "#FFD3B6",
+            "Business & Economics": "#00bcd4",
+            "Engineering": "#ff9800",
+            "Science": "#009688",
+            "Arts": "#b71c1c",
+            "Medicine": "#2196f3",
+            "IT": "#7b1fa2",
+            "Law": "#776c55",
+            "Education": "#b81b60",
+            "Pharmacy": "#7c8500",
+            "Art, Design & Architecture": "#455a64",
         };
         
         // Icon components
@@ -86,6 +86,7 @@
             const [draggedUnit, setDraggedUnit] = useState(null);
             const [hoveredUnit, setHoveredUnit] = useState(null);
             const [hoverTimeout, setHoverTimeout] = useState(null);
+            const [contextMenuSemester, setContextMenuSemester] = useState(null);
             
             useEffect(() => {
                 const loadUnits = async () => {
@@ -188,7 +189,33 @@
                 };
                 input.click();
             };
+
+            const addOverloadUnit = (semesterId) => {
+                const newSemesters = [...semesters];
+                const semIndex = newSemesters.findIndex(s => s.id === semesterId);
+                newSemesters[semIndex].units.push(null);
+                setSemesters(newSemesters);
+                setContextMenuSemester(null);
+            };
             
+            const removeOverloadUnit = (semesterId) => {
+                const newSemesters = [...semesters];
+                const semIndex = newSemesters.findIndex(s => s.id === semesterId);
+                if (newSemesters[semIndex].units.length > 4) {
+                    newSemesters[semIndex].units.pop();
+                    setSemesters(newSemesters);
+                }
+                setContextMenuSemester(null);
+            };
+            
+            const deleteSemester = (semesterId) => {
+                const semIndex = semesters.findIndex(s => s.id === semesterId);
+                if (semIndex === semesters.length - 1 && semesters.length > 1) {
+                    setSemesters(semesters.slice(0, -1));
+                }
+                setContextMenuSemester(null);
+            };
+                     
             const handleSetupComplete = () => {
                 const newSemesters = [];
                 for (let year = 0; year < degreeLength; year++) {
@@ -497,30 +524,63 @@
                                     <thead>
                                         <tr className="bg-gray-100">
                                             <th className="border border-gray-300 p-3 text-left font-semibold w-48">Semester</th>
-                                            <th className="border border-gray-300 p-3 text-center font-semibold">Unit 1</th>
-                                            <th className="border border-gray-300 p-3 text-center font-semibold">Unit 2</th>
-                                            <th className="border border-gray-300 p-3 text-center font-semibold">Unit 3</th>
-                                            <th className="border border-gray-300 p-3 text-center font-semibold">Unit 4</th>
+                                            <th className="border border-gray-300 p-3 text-center font-semibold" style={{width: '18%'}}>Unit 1</th>
+                                            <th className="border border-gray-300 p-3 text-center font-semibold" style={{width: '18%'}}>Unit 2</th>
+                                            <th className="border border-gray-300 p-3 text-center font-semibold" style={{width: '18%'}}>Unit 3</th>
+                                            <th className="border border-gray-300 p-3 text-center font-semibold" style={{width: '18%'}}>Unit 4</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {semesters.map((semester, semIdx) => (
                                             <tr key={semester.id}>
                                                 <td
-                                                    className="border border-gray-300 p-3 font-medium bg-gray-50"
-                                                    onContextMenu={(e) => {
-                                                        if (semIdx === semesters.length - 1) {
-                                                            e.preventDefault();
-                                                            removeSemester();
-                                                        }
-                                                    }}
+                                                    className="border border-gray-300 p-3 font-medium bg-gray-50 relative"
                                                 >
-                                                    {semester.label}
+                                                    <div className="flex items-center justify-between">
+                                                        <span>{semester.label}</span>
+                                                        <button
+                                                            onClick={() => setContextMenuSemester(contextMenuSemester === semester.id ? null : semester.id)}
+                                                            className="text-gray-500 hover:text-gray-700 p-1"
+                                                        >
+                                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                                                <circle cx="12" cy="5" r="2"></circle>
+                                                                <circle cx="12" cy="12" r="2"></circle>
+                                                                <circle cx="12" cy="19" r="2"></circle>
+                                                            </svg>
+                                                        </button>
+                                                    </div>
+                                                    {contextMenuSemester === semester.id && (
+                                                        <div className="absolute right-0 top-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 w-48">
+                                                            <button
+                                                                onClick={() => addOverloadUnit(semester.id)}
+                                                                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm"
+                                                            >
+                                                                Add Overload Unit
+                                                            </button>
+                                                            {semester.units.length > 4 && (
+                                                                <button
+                                                                    onClick={() => removeOverloadUnit(semester.id)}
+                                                                    className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm"
+                                                                >
+                                                                    Remove Overload Unit
+                                                                </button>
+                                                            )}
+                                                            {semIdx === semesters.length - 1 && (
+                                                                <button
+                                                                    onClick={() => deleteSemester(semester.id)}
+                                                                    className="w-full text-left px-4 py-2 hover:bg-red-100 text-sm text-red-600 border-t border-gray-200"
+                                                                >
+                                                                    Delete Semester
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                 </td>
                                                 {semester.units.map((unit, unitIdx) => (
                                                     <td
                                                         key={unitIdx}
                                                         className="border border-gray-300 p-2 align-top"
+                                                        style={{width: '18%'}}
                                                         onDragOver={(e) => e.preventDefault()}
                                                         onDrop={() => handleDrop(semester.id, unitIdx)}
                                                     >
@@ -533,12 +593,12 @@
                                                                 onMouseLeave={handleMouseLeave}
                                                             >
                                                                 <div
-                                                                    className="w-1 rounded-l-lg mr-3"
+                                                                    className="w-1 rounded-l-lg mr-3 flex-shrink-0"
                                                                     style={{ backgroundColor: FACULTY_COLORS[unit.faculty] || '#999' }}
                                                                 />
-                                                                <div className="flex-1">
+                                                                <div className="flex-1 min-w-0">
                                                                     <div className="font-bold text-gray-800">{unit.code}</div>
-                                                                    <div className="text-sm text-gray-600">{unit.name}</div>
+                                                                    <div className="text-sm text-gray-600 break-words">{unit.name}</div>
                                                                     {!isUnitOffered(unit, semester.semesterType) && (
                                                                         <div className="text-xs text-red-600 mt-1">
                                                                             ⚠️ Not offered {semester.semesterType}
@@ -547,7 +607,7 @@
                                                                 </div>
                                                                 <button
                                                                     onClick={() => removeUnit(semester.id, unitIdx)}
-                                                                    className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition"
+                                                                    className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition flex-shrink-0"
                                                                 >
                                                                     <X />
                                                                 </button>
@@ -558,7 +618,7 @@
                                                                         onMouseEnter={handlePopupEnter}
                                                                         onMouseLeave={handlePopupLeave}
                                                                     >
-                                                                        <a
+                                                                        
                                                                             href={`https://handbook.monash.edu/2026/units/${unit.code}`}
                                                                             target="_blank"
                                                                             rel="noopener noreferrer"
@@ -577,7 +637,7 @@
                                                     </td>
                                                 ))}
                                             </tr>
-                                        ))}
+                                        ))}    
                                     </tbody>
                                 </table>
                                 
