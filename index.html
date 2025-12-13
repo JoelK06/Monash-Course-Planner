@@ -758,11 +758,17 @@
                 return semester.units.filter(u => u && u.code === unitCode).length > 1;
             };
             
-            const isUnitOffered = (unit, semesterType) => {
-                if (!unit) return true;
-                if (!unit.semesters || unit.semesters.includes('Not offered')) return true;
-                return unit.semesters.includes(semesterType);
-            };
+            const isUnitOffered = (unit, semesterType, semesterLabel) => {
+			    if (!unit) return true;
+			    
+			    const semesterYear = parseInt(semesterLabel.split(', ')[1]);
+			    const currentYear = new Date().getFullYear();
+				
+			    if (semesterYear <= currentYear) return true;
+			    
+			    if (!unit.semesters || unit.semesters.includes('Not offered')) return true;
+			    return unit.semesters.includes(semesterType);
+			};
             
             const handleMouseEnter = (unit) => {
                 const timeout = setTimeout(() => {
@@ -1283,7 +1289,7 @@
                                                                                     <div className="text-xs text-orange-600 mt-1">
                                                                                         ⚠️ No duplicates
                                                                                     </div>
-                                                                                ) : !isUnitOffered(unit, semester.semesterType) ? (
+                                                                                ) : !isUnitOffered(unit, semester.semesterType, semester.label) ? (
                                                                                     <div className="text-xs text-red-600 mt-1 truncate"
                                                                                         title={`Not offered ${semester.semesterType}`}>
                                                                                         ⚠️ Not offered {semester.semesterType === 'Semester 1' ? 'S1' : 'S2'}
