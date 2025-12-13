@@ -354,34 +354,53 @@
             };
             
             const createNewPlan = () => {
-                const newPlan = {
-                    id: 'plan-' + Date.now(),
-                    name: `Plan ${plans.length + 1}`,
-                    startYear: 2025,
-                    degreeLength: 4,
-                    semesters: []
-                };
-                const newSemesters = [];
-                for (let year = 0; year < 4; year++) {
-                    newSemesters.push({
-                        id: `s1-${year}`,
-                        label: `Semester 1, ${2025 + year}`,
-                        semesterType: 'Semester 1',
-                        units: [null, null, null, null]
-                    });
-                    newSemesters.push({
-                        id: `s2-${year}`,
-                        label: `Semester 2, ${2025 + year}`,
-                        semesterType: 'Semester 2',
-                        units: [null, null, null, null]
-                    });
-                }
-                newPlan.semesters = newSemesters;
-                const updatedPlans = [...plans, newPlan];
-                savePlans(updatedPlans, newPlan.id);
-                setCurrentPlanId(newPlan.id);
-                loadPlan(newPlan);
-            };
+			    const yearInput = prompt('Enter start year for new plan:', '2025');
+			    if (yearInput === null) return; // User cancelled
+			    
+			    const newStartYear = parseInt(yearInput);
+			    if (isNaN(newStartYear) || newStartYear < 2000 || newStartYear > 2100) {
+			        alert('Please enter a valid year between 2000 and 2100');
+			        return;
+			    }
+				
+			    const lengthInput = prompt('Enter degree length in years:', '4');
+			    if (lengthInput === null) return; // User cancelled
+			    
+			    const newDegreeLength = parseInt(lengthInput);
+			    if (isNaN(newDegreeLength) || newDegreeLength < 1 || newDegreeLength > 12) {
+			        alert('Please enter a valid degree length between 1 and 12 years');
+			        return;
+			    }
+			    
+			    const newPlan = {
+			        id: 'plan-' + Date.now(),
+			        name: `Plan ${plans.length + 1}`,
+			        startYear: newStartYear,
+			        degreeLength: newDegreeLength,
+			        semesters: []
+			    };
+			    
+			    const newSemesters = [];
+			    for (let year = 0; year < newDegreeLength; year++) {
+			        newSemesters.push({
+			            id: `s1-${year}`,
+			            label: `Semester 1, ${newStartYear + year}`,
+			            semesterType: 'Semester 1',
+			            units: [null, null, null, null]
+			        });
+			        newSemesters.push({
+			            id: `s2-${year}`,
+			            label: `Semester 2, ${newStartYear + year}`,
+			            semesterType: 'Semester 2',
+			            units: [null, null, null, null]
+			        });
+			    }
+			    newPlan.semesters = newSemesters;
+			    const updatedPlans = [...plans, newPlan];
+			    savePlans(updatedPlans, newPlan.id);
+			    setCurrentPlanId(newPlan.id);
+			    loadPlan(newPlan);
+			};
             
             const switchPlan = (planId) => {
                 const plan = plans.find(p => p.id === planId);
