@@ -18,23 +18,27 @@
             overflow: hidden;
         }
 
-        /* Dark mode styles - with higher specificity */
         html.dark,
-        html.dark body,
-        .dark {
+        html.dark body {
             background-color: #111827;
         }
         
         html.dark .bg-gray-50 { background-color: #1f2937 !important; }
         html.dark .bg-white { background-color: #111827 !important; }
         html.dark .bg-gray-100 { background-color: #374151 !important; }
+        html.dark .bg-gray-800 { background-color: #1f2937 !important; }
+        html.dark .bg-gray-900 { background-color: #111827 !important; }
+        html.dark .bg-gray-700 { background-color: #374151 !important; }
         html.dark .text-gray-800 { color: #f3f4f6 !important; }
         html.dark .text-gray-700 { color: #d1d5db !important; }
         html.dark .text-gray-600 { color: #9ca3af !important; }
         html.dark .text-gray-500 { color: #9ca3af !important; }
         html.dark .text-gray-400 { color: #6b7280 !important; }
+        html.dark .text-gray-200 { color: #e5e7eb !important; }
         html.dark .border-gray-300 { border-color: #374151 !important; }
         html.dark .border-gray-200 { border-color: #374151 !important; }
+        html.dark .hover\:bg-gray-100:hover { background-color: #374151 !important; }
+        html.dark .hover\:bg-gray-700:hover { background-color: #4b5563 !important; }
     </style>
 </head>
 <body>
@@ -797,7 +801,7 @@
             
             const InfoModal = () => (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full max-h-[80vh] overflow-y-auto info-modal-content">
+                    <div className="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[80vh] overflow-y-auto info-modal-content">
                         <div className="p-6">
                             <div className="flex justify-between items-start mb-4">
                                 <h2 className="text-2xl font-bold text-gray-800">About Monash Course Planner</h2>
@@ -996,7 +1000,7 @@
                         </div>
                     </div>
                     
-                    <div className="flex-1 flex flex-col bg-gray-50 dark:bg-gray-900">
+                    <div className="flex-1 flex flex-col bg-gray-50">
                         <div className="bg-blue-600 p-4 relative z-10">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
@@ -1079,7 +1083,7 @@
                                                                 }
                                                                 setOpenPlanMenuId(null);
                                                             }}
-                                                           className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-700 dark:text-gray-200"
+                                                           className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700"
                                                         >
                                                             Clear Plan
                                                         </button>
@@ -1137,24 +1141,24 @@
                                     </button>
         
                                     {showSettings && (
-                                        <div className="absolute right-0 top-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 rounded-lg shadow-lg z-50 w-48">
+                                        <div className="absolute right-0 top-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 w-48">
                                             <button
                                                 onClick={handleImportCourse}
-                                                className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-700 dark:text-gray-200 flex items-center gap-2"
+                                                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700 flex items-center gap-2"
                                             >
                                                 <Upload />
                                                 Import Plan
                                             </button>
                                             <button
                                                 onClick={exportPlan}
-                                                className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-700 dark:text-gray-200 flex items-center gap-2"
+                                                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700 flex items-center gap-2"
                                             >
                                                 <Download />
                                                 Export Plan
                                             </button>
                                             <button
                                                 onClick={toggleDarkMode}
-                                                className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-700 dark:text-gray-200 flex items-center gap-2"
+                                                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700 flex items-center gap-2"
                                             >
                                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                                     {darkMode ? (
@@ -1175,9 +1179,9 @@
                             <div className="bg-white shadow-lg overflow-hidden">
                                 <table className="w-full border-collapse" style={{ minWidth: '900px' }}>
                                         <thead>
-                                            <tr className="bg-gray-100 dark:bg-gray-700">
-                                                <th className="border border-gray-300 p-3 text-left font-semibold text-gray-800 dark:text-gray-200" style={{width: '180px'}}>Semester</th>
-                                                <th className="border border-gray-300 p-3 text-center font-semibold text-gray-800 dark:text-gray-200">Units</th>
+                                            <tr className="bg-gray-100">
+                                                <th className="border border-gray-300 p-3 text-left font-semibold text-gray-800" style={{width: '180px'}}>Semester</th>
+                                                <th className="border border-gray-300 p-3 text-center font-semibold text-gray-800">Units</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -1188,7 +1192,7 @@
                                                         style={{width: '180px'}}
                                                     >
                                                         <div className="flex items-center justify-between">
-                                                            <span className="text-gray-800 dark:text-gray-200">{semester.label}</span>
+                                                            <span className="text-gray-800">{semester.label}</span>
                                                             <button
                                                                 onClick={() => setContextMenuSemester(contextMenuSemester === semester.id ? null : semester.id)}
                                                                 className="text-gray-500 hover:text-gray-700 p-1"
@@ -1201,10 +1205,10 @@
                                                             </button>
                                                         </div>
                                                         {contextMenuSemester === semester.id && (
-                                                            <div className="absolute left-full ml-2 top-0 bg-white dark:bg-gray-800 border border-gray-300 rounded-lg shadow-lg z-50 w-56">
+                                                            <div className="absolute left-full ml-2 top-0 bg-white border border-gray-300 rounded-lg shadow-lg z-50 w-56">
                                                                 <button
                                                                     onClick={() => resetSemester(semester.id)}
-                                                                    className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-700 dark:text-gray-200"
+                                                                    className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700"
                                                                 >
                                                                     Reset Semester (4 units)
                                                                 </button>
@@ -1212,21 +1216,21 @@
                                                                     <>
                                                                         <button
                                                                             onClick={() => addOverloadUnit(semester.id)}
-                                                                            className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-700 dark:text-gray-200"
+                                                                            className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700"
                                                                         >
                                                                             Add Overload Unit
                                                                         </button>
                                                                         {semester.units.length > 4 && (
                                                                             <button
                                                                                 onClick={() => removeOverloadUnit(semester.id)}
-                                                                                className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-700 dark:text-gray-200"
+                                                                                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700"
                                                                             >
                                                                                 Remove Overload Unit
                                                                             </button>
                                                                         )}
                                                                         <button
                                                                             onClick={() => setAcademicLeave(semester.id)}
-                                                                            className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-700 dark:text-gray-200 flex items-center gap-2"
+                                                                            className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700 flex items-center gap-2"
                                                                         >
                                                                             Set as Academic Leave
                                                                         </button>
@@ -1235,7 +1239,7 @@
                                                                 {semester.isAcademicLeave && (
                                                                     <button
                                                                         onClick={() => removeAcademicLeave(semester.id)}
-                                                                        className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-700 dark:text-gray-200 flex items-center gap-2"
+                                                                        className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700 flex items-center gap-2"
                                                                     >
                                                                         Remove Academic Leave
                                                                     </button>
@@ -1243,7 +1247,7 @@
                                                                 {semIdx === semesters.length - 1 && (
                                                                     <button
                                                                         onClick={() => deleteSemester(semester.id)}
-                                                                        className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-700 dark:text-gray-200 flex items-center gap-2"
+                                                                        className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700 flex items-center gap-2"
                                                                     >
                                                                         Delete Semester
                                                                     </button>
@@ -1253,8 +1257,8 @@
                                                     </td>
                                                     <td className="border border-gray-300 p-2 align-top">
                                                         {semester.isAcademicLeave ? (
-                                                            <div className="h-24 bg-white dark:bg-gray-800 border-2 border-yellow-500 rounded-lg flex items-center justify-center">
-                                                                <span className="text-yellow-600 dark:text-yellow-400 font-semibold">Academic Leave</span>
+                                                            <div className="h-24 bg-white border-2 border-yellow-500 rounded-lg flex items-center justify-center">
+                                                                <span className="text-yellow-600 font-semibold">Academic Leave</span>
                                                             </div>
                                                         ) : (
                                                             <div className={isMobile ? 'grid gap-2 grid-cols-2' : 'grid gap-2 grid-cols-' + semester.units.length}>
@@ -1303,7 +1307,7 @@
                                                                                     e.stopPropagation();
                                                                                     removeUnit(semester.id, unitIdx);
                                                                                 }}
-                                                                                className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition flex-shrink-0 text-gray-800 dark:text-gray-200"
+                                                                                className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition flex-shrink-0 text-gray-800"
                                                                             >
                                                                                 <X />
                                                                             </button>
