@@ -640,6 +640,32 @@
                     units: [null, null, null, null]
                 }]);
             };
+
+            const addSummerSemester = (semesterId) => {
+                const newSemesters = [...semesters];
+                const semIndex = newSemesters.findIndex(s => s.id === semesterId);
+                const currentSemester = newSemesters[semIndex];
+                const currentYear = parseInt(currentSemester.label.split(', ')[1]);
+
+                const newSummer = {
+                    id: `summer-${Date.now()}`,
+                    label: `Summer Semester A/B, ${currentYear}`,
+                    semesterType: 'Summer',
+                    units: [null, null, null, null]
+                };
+
+                newSemesters.splice(semIndex + 1, 0, newSummer);
+
+                setSemesters(newSemesters);
+
+                setContextMenuSemester(null);
+            }
+
+            const removeSummerSemester = (semesterId) => {
+                        const newSemesters = semesters.filter(s => s.id !== semesterId);
+                        setSemesters(newSemesters);
+                        setContextMenuSemester(null);
+                    }
             
             const removeSemester = () => {
                 if (semesters.length > 1) {
@@ -1225,6 +1251,22 @@
                                                                 >
                                                                     Reset Semester (4 units)
                                                                 </button>
+                                                                {semester.semesterType !== 'Summer' && (
+                                                                    <button
+                                                                    onClick={() => addSummerSemester(semester.id)}
+                                                                    className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700"
+                                                                >
+                                                                    Add a summer semester
+                                                                </button>
+                                                                )}
+                                                                {semester.semesterType === 'Summer' && (
+                                                                    <button
+                                                                        onClick={() => removeSummerSemester(semester.id)}
+                                                                        className="w-full text-left px-4 py-2 hover:bg-red-100 text-red-600 text-sm border-t border-gray-200"
+                                                                    >
+                                                                        Remove Summer Semester
+                                                                    </button>
+                                                                )}
                                                                 {!semester.isAcademicLeave && (
                                                                     <>
                                                                         <button
