@@ -62,8 +62,7 @@
             "Art, Design & Architecture": "#607d8b",
             "Unknown": "#0069a7"
         };
-        
-        // Icon components
+
         const Search = () => (
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <circle cx="11" cy="11" r="8"></circle>
@@ -440,7 +439,6 @@
                         try {
                             const data = JSON.parse(event.target.result);
                             
-                            // Create a new plan with the loaded data
                             const fileName = file.name.replace('.json', '').replace(/[-_]/g, ' ');
                             const planName = data.name || fileName || `Loaded Plan`;
                             
@@ -452,7 +450,6 @@
                                 semesters: data.semesters || []
                             };
                             
-                            // Ensure semesters have the right structure
                             const validSemesters = newPlan.semesters.map(sem => ({
                                 ...sem,
                                 units: Array.isArray(sem.units) ? sem.units : [null, null, null, null],
@@ -501,7 +498,6 @@
                                 semesters: data.semesters || []
                             };
                             
-                            // Ensure semesters have the right structure
                             const validSemesters = newPlan.semesters.map(sem => ({
                                 ...sem,
                                 units: Array.isArray(sem.units) ? sem.units : [null, null, null, null],
@@ -679,15 +675,12 @@
                 const newSemesters = [...semesters];
                 const semIndex = newSemesters.findIndex(s => s.id === semesterId);
                 
-                // Check if we're moving from the grid (not from sidebar)
                 let fromSemIndex = -1;
                 let fromUnitIndex = -1;
-                
-                // Check if unit has an instance ID (meaning it's from the grid)
+              
                 const isFromGrid = unitToPlace._instanceId !== undefined;
                 
                 if (isFromGrid) {
-                    // Look for source using unique instance ID
                     for (let i = 0; i < newSemesters.length; i++) {
                         const foundIndex = newSemesters[i].units.findIndex(u => 
                             u && u._instanceId === unitToPlace._instanceId
@@ -699,7 +692,6 @@
                         }
                     }
                     
-                    // If moving to the same spot, do nothing
                     if (fromSemIndex === semIndex && fromUnitIndex === unitIndex) {
                         setDraggedUnit(null);
                         setSelectedUnit(null);
@@ -707,22 +699,18 @@
                         return;
                     }
                     
-                    // Moving from grid - swap positions
                     const temp = newSemesters[semIndex].units[unitIndex];
                     newSemesters[semIndex].units[unitIndex] = unitToPlace;
                     newSemesters[fromSemIndex].units[fromUnitIndex] = temp;
                 } else {
-                    // Adding from sidebar - check if duplicate exists in this semester
                     const duplicateIndex = newSemesters[semIndex].units.findIndex(
                         (u, idx) => u && u.code === unitToPlace.code && idx !== unitIndex
                     );
                     
                     if (duplicateIndex !== -1) {
-                        // Replace the existing duplicate instead of creating another
                         newSemesters[semIndex].units[duplicateIndex] = null;
                     }
                     
-                    // Create a new instance with unique ID
                     const newUnit = { ...unitToPlace, _instanceId: Date.now() + Math.random() };
                     newSemesters[semIndex].units[unitIndex] = newUnit;
                 }
