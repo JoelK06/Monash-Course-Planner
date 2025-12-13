@@ -17,3 +17,9 @@ Try the program [HERE](https://joelk06.github.io/Monash-Course-Planner/)</p>
 
 Thank you for using my program</p>
 **Created by Joel Knight**
+
+## ** TO DO **
+- fix issue with summer unit warnings on all units
+- add winter semester
+- add classification to unit document for summer and winter units
+- add specific warning for these units
