@@ -1,4 +1,4 @@
-export const UNITS_CSV_URL = 'https://raw.githubusercontent.com/JoelK06/Monash-units/refs/heads/main/monash_units_complete.csv';
+export const UNITS_CSV_URL = 'https://raw.githubusercontent.com/JoelK06/Monash-units/refs/heads/main/data/monash_units_complete.csv';
 
 export const DATA_VERSION = '2';
 
