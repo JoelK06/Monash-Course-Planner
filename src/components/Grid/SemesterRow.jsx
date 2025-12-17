@@ -1,0 +1,261 @@
+import { useState, useEffect } from 'react';
+import { MenuDots } from '../Icons/Icons';
+import UnitSlot from './UnitSlot';
+
+export default function SemesterRow({ 
+  semester, 
+  semIdx,
+  isLastSemester,
+  selectedUnit,
+  draggedUnit,
+  setDraggedUnit,
+  contextMenuSemester,
+  setContextMenuSemester,
+  onDrop,
+  onRemoveUnit,
+  onUnitClick,
+  setSemesters,
+  semesters
+}) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = ('ontouchstart' in window || navigator.maxTouchPoints > 0) && window.innerWidth < 1024;
+      setIsMobile(mobile);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  const resetSemester = () => {
+    const newSemesters = [...semesters];
+    const semIndex = newSemesters.findIndex(s => s.id === semester.id);
+    
+    if (semester.semesterType === 'Summer' || semester.semesterType === 'Winter') {
+      newSemesters[semIndex].units = [null, null];
+    } else {
+      newSemesters[semIndex].units = [null, null, null, null];
+    }
+    
+    newSemesters[semIndex].isAcademicLeave = false;
+    setSemesters(newSemesters);
+    setContextMenuSemester(null);
+  };
+
+  const setAcademicLeave = () => {
+    const newSemesters = [...semesters];
+    const semIndex = newSemesters.findIndex(s => s.id === semester.id);
+    newSemesters[semIndex].units = ['ACADEMIC_LEAVE'];
+    newSemesters[semIndex].isAcademicLeave = true;
+    setSemesters(newSemesters);
+    setContextMenuSemester(null);
+  };
+
+  const removeAcademicLeave = () => {
+    const newSemesters = [...semesters];
+    const semIndex = newSemesters.findIndex(s => s.id === semester.id);
+    newSemesters[semIndex].units = [null, null, null, null];
+    newSemesters[semIndex].isAcademicLeave = false;
+    setSemesters(newSemesters);
+    setContextMenuSemester(null);
+  };
+
+  const addOverloadUnit = () => {
+    const newSemesters = [...semesters];
+    const semIndex = newSemesters.findIndex(s => s.id === semester.id);
+    newSemesters[semIndex].units.push(null);
+    setSemesters(newSemesters);
+    setContextMenuSemester(null);
+  };
+
+  const removeOverloadUnit = () => {
+    const newSemesters = [...semesters];
+    const semIndex = newSemesters.findIndex(s => s.id === semester.id);
+    if (newSemesters[semIndex].units.length > 4) {
+      newSemesters[semIndex].units.pop();
+      setSemesters(newSemesters);
+    }
+    setContextMenuSemester(null);
+  };
+
+  const addSummerSemester = () => {
+    const newSemesters = [...semesters];
+    const semIndex = newSemesters.findIndex(s => s.id === semester.id);
+    const currentYear = parseInt(semester.label.split(', ')[1]);
+
+    const newSummer = {
+      id: `summer-${Date.now()}`,
+      label: `Summer Semester A/B, ${currentYear}`,
+      semesterType: 'Summer',
+      units: [null, null]
+    };
+
+    newSemesters.splice(semIndex + 1, 0, newSummer);
+    setSemesters(newSemesters);
+    setContextMenuSemester(null);
+  };
+
+  const addWinterSemester = () => {
+    const newSemesters = [...semesters];
+    const semIndex = newSemesters.findIndex(s => s.id === semester.id);
+    const currentYear = parseInt(semester.label.split(', ')[1]);
+
+    const newWinter = {
+      id: `winter-${Date.now()}`,
+      label: `Winter Semester, ${currentYear}`,
+      semesterType: 'Winter',
+      units: [null, null]
+    };
+
+    newSemesters.splice(semIndex + 1, 0, newWinter);
+    setSemesters(newSemesters);
+    setContextMenuSemester(null);
+  };
+
+  const removeSummerSemester = () => {
+    const newSemesters = semesters.filter(s => s.id !== semester.id);
+    setSemesters(newSemesters);
+    setContextMenuSemester(null);
+  };
+
+  const removeWinterSemester = () => {
+    const newSemesters = semesters.filter(s => s.id !== semester.id);
+    setSemesters(newSemesters);
+    setContextMenuSemester(null);
+  };
+
+  const deleteSemester = () => {
+    if (isLastSemester && semesters.length > 1) {
+      setSemesters(semesters.slice(0, -1));
+    }
+    setContextMenuSemester(null);
+  };
+
+  return (
+    <tr>
+      <td
+        className="border border-gray-300 p-3 font-medium bg-gray-50 relative align-top semester-menu-container"
+        style={{width: '180px'}}
+      >
+        <div className="flex items-center justify-between">
+          <span className="text-gray-800">{semester.label}</span>
+          <button
+            onClick={() => setContextMenuSemester(contextMenuSemester === semester.id ? null : semester.id)}
+            className="text-gray-500 hover:text-gray-700 p-1"
+          >
+            <MenuDots />
+          </button>
+        </div>
+        
+        {contextMenuSemester === semester.id && (
+          <div className="absolute left-full ml-2 top-0 bg-white border border-gray-300 rounded-lg shadow-lg z-50 w-56">
+            <button
+              onClick={resetSemester}
+              className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700"
+            >
+              Reset Semester
+            </button>
+            {semester.semesterType === 'Semester 1' && (
+              <button
+                onClick={addWinterSemester}
+                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700"
+              >
+                Add a winter semester
+              </button>
+            )}
+            {semester.semesterType === 'Semester 2' && (
+              <button
+                onClick={addSummerSemester}
+                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700"
+              >
+                Add a summer semester
+              </button>
+            )}
+            {semester.semesterType === 'Summer' && (
+              <button
+                onClick={removeSummerSemester}
+                className="w-full text-left px-4 py-2 hover:bg-red-100 text-red-600 text-sm border-t border-gray-200"
+              >
+                Remove Summer Semester
+              </button>
+            )}
+            {semester.semesterType === 'Winter' && (
+              <button
+                onClick={removeWinterSemester}
+                className="w-full text-left px-4 py-2 hover:bg-red-100 text-red-600 text-sm border-t border-gray-200"
+              >
+                Remove Winter Semester
+              </button>
+            )}
+            {!semester.isAcademicLeave && (
+              <>
+                <button
+                  onClick={addOverloadUnit}
+                  className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700"
+                >
+                  Add Overload Unit
+                </button>
+                {semester.units.length > 4 && (
+                  <button
+                    onClick={removeOverloadUnit}
+                    className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700"
+                  >
+                    Remove Overload Unit
+                  </button>
+                )}
+                <button
+                  onClick={setAcademicLeave}
+                  className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700 flex items-center gap-2"
+                >
+                  Set as Academic Leave
+                </button>
+              </>
+            )}
+            {semester.isAcademicLeave && (
+              <button
+                onClick={removeAcademicLeave}
+                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700 flex items-center gap-2"
+              >
+                Remove Academic Leave
+              </button>
+            )}
+            {isLastSemester && (
+              <button
+                onClick={deleteSemester}
+                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700 flex items-center gap-2"
+              >
+                Delete Semester
+              </button>
+            )}
+          </div>
+        )}
+      </td>
+      <td className="border border-gray-300 p-2 align-top">
+        {semester.isAcademicLeave ? (
+          <div className="h-24 bg-white border-2 border-yellow-500 rounded-lg flex items-center justify-center">
+            <span className="text-yellow-600 font-semibold">Academic Leave</span>
+          </div>
+        ) : (
+          <div className={isMobile ? 'grid gap-2 grid-cols-2' : `grid gap-2 ${semester.semesterType === 'Summer' || semester.semesterType === 'Winter' ? 'grid-cols-4' : 'grid-cols-' + semester.units.length}`}>
+            {semester.units.map((unit, unitIdx) => (
+              <UnitSlot
+                key={unit?._instanceId || `empty-${unitIdx}`}
+                unit={unit}
+                unitIdx={unitIdx}
+                semester={semester}
+                selectedUnit={selectedUnit}
+                draggedUnit={draggedUnit}
+                setDraggedUnit={setDraggedUnit}
+                onDrop={onDrop}
+                onRemoveUnit={onRemoveUnit}
+                onUnitClick={onUnitClick}
+              />
+            ))}
+          </div>
+        )}
+      </td>
+    </tr>
+  );
+}
