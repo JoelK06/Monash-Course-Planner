@@ -29,6 +29,18 @@ function App() {
   const [selectedUnit, setSelectedUnit] = useState(null);
   const [draggedUnit, setDraggedUnit] = useState(null);
 
+  // Save to localStorage whenever semesters change
+  useEffect(() => {
+    if (semesters.length > 0 && currentPlanId && plans.length > 0) {
+      const updatedPlans = plans.map(p => 
+        p.id === currentPlanId 
+          ? { ...p, semesters, startYear, degreeLength }
+          : p
+      );
+      savePlans(updatedPlans, currentPlanId);
+    }
+  }, [semesters]);
+
   // Load saved plans when units data is ready
   useEffect(() => {
     if (unitsData.length === 0) return;
