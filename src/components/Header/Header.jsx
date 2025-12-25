@@ -9,6 +9,7 @@ export default function Header({
   onCreatePlan,
   onDeletePlan,
   onClearPlan,
+  onRenamePlan,
   onExport,
   onImport,
   darkMode,
@@ -49,6 +50,7 @@ export default function Header({
           onCreatePlan={onCreatePlan}
           onDeletePlan={onDeletePlan}
           onClearPlan={onClearPlan}
+          onRenamePlan={onRenamePlan} 
         />
         
         <SettingsMenu

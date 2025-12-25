@@ -7,7 +7,8 @@ export default function PlanTabs({
   onSwitchPlan,
   onCreatePlan,
   onDeletePlan,
-  onClearPlan
+  onClearPlan,
+  onRenamePlan
 }) {
   const [editingPlanId, setEditingPlanId] = useState(null);
   const [editingPlanName, setEditingPlanName] = useState('');
@@ -31,7 +32,7 @@ export default function PlanTabs({
 
   const handleRenameKeyDown = (e, planId) => {
     if (e.key === 'Enter') {
-      // TODO: Call rename function
+      onRenamePlan(planId, editingPlanName);
       setEditingPlanId(null);
     } else if (e.key === 'Escape') {
       setEditingPlanId(null);
@@ -39,7 +40,7 @@ export default function PlanTabs({
   };
 
   const handleRenameBlur = (planId) => {
-    // TODO: Call rename function
+    onRenamePlan(planId, editingPlanName);
     setEditingPlanId(null);
   };
 

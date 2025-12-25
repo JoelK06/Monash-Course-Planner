@@ -29,7 +29,6 @@ function App() {
   const [selectedUnit, setSelectedUnit] = useState(null);
   const [draggedUnit, setDraggedUnit] = useState(null);
 
-  // Save to localStorage whenever semesters change
   useEffect(() => {
     if (semesters.length > 0 && currentPlanId && plans.length > 0) {
       const updatedPlans = plans.map(p => 
@@ -41,7 +40,6 @@ function App() {
     }
   }, [semesters]);
 
-  // Load saved plans when units data is ready
   useEffect(() => {
     if (unitsData.length === 0) return;
     
@@ -49,15 +47,13 @@ function App() {
       const saved = localStorage.getItem(STORAGE_KEYS.PLANS);
       if (saved) {
         const allPlans = JSON.parse(saved);
-        
-        // Refresh unit data for all plans
+  
         const refreshedPlans = allPlans.map(plan => ({
           ...plan,
           semesters: plan.semesters.map(sem => ({
             ...sem,
             units: sem.units.map(unit => {
               if (!unit || unit === 'ACADEMIC_LEAVE') return unit;
-              // Find fresh unit data
               const freshUnit = unitsData.find(u => u.code === unit.code);
               if (freshUnit) {
                 return { ...freshUnit, _instanceId: unit._instanceId || Date.now() + Math.random() };
@@ -134,6 +130,15 @@ function App() {
     setCurrentPlanId(newPlan.id);
     setSemesters(newSemesters);
     setShowSetup(false);
+  };
+
+  const renamePlan = (planId, newName) => {
+    if (!newName.trim()) return;
+    
+    const updatedPlans = plans.map(p => 
+      p.id === planId ? { ...p, name: newName.trim() } : p
+    );
+    savePlans(updatedPlans, currentPlanId);
   };
 
   const createNewPlan = () => {
@@ -280,14 +285,12 @@ function App() {
             degreeLength: data.degreeLength || 4,
             semesters: data.semesters || []
           };
-          
-          // Refresh unit data from current unitsData
+
           const validSemesters = newPlan.semesters.map(sem => ({
             ...sem,
             units: Array.isArray(sem.units) 
               ? sem.units.map(unit => {
                   if (!unit || unit === 'ACADEMIC_LEAVE') return unit;
-                  // Find the fresh unit data
                   const freshUnit = unitsData.find(u => u.code === unit.code);
                   if (freshUnit) {
                     return { ...freshUnit, _instanceId: Date.now() + Math.random() };
@@ -380,6 +383,7 @@ function App() {
           onCreatePlan={createNewPlan}
           onDeletePlan={deletePlan}
           onClearPlan={clearPlan}
+          onRenamePlan={renamePlan}
           onExport={exportPlan}
           onImport={importPlan}
           darkMode={darkMode}
