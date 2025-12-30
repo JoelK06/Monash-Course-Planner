@@ -27,7 +27,7 @@ export const isUnitOffered = (unit, semesterType, semesterLabel) => {
   const semesterData = unit[semesterKey];
   
   if (!semesterData || semesterData.trim() === '' || semesterData.includes('Not offered')) {
-    return false;
+    return ;
   }
   
   const lowerData = semesterData.toLowerCase();

@@ -125,8 +125,28 @@ export default function UnitSlot({
           ) : (() => {
             const semesterYear = parseInt(semester.label.split(', ')[1]);
             let dataYear = semesterYear;
-            if (semesterYear > 2026) dataYear = 2026;
-            else if (semesterYear < 2020) return null;
+            
+            // If year is in the future (beyond our data)
+            if (semesterYear > 2026) {
+              // Check if we have ANY data at all for this unit
+              const hasAnyData = 
+                (unit.semesters_2020 && unit.semesters_2020.trim() !== '') ||
+                (unit.semesters_2021 && unit.semesters_2021.trim() !== '') ||
+                (unit.semesters_2022 && unit.semesters_2022.trim() !== '') ||
+                (unit.semesters_2023 && unit.semesters_2023.trim() !== '') ||
+                (unit.semesters_2024 && unit.semesters_2024.trim() !== '') ||
+                (unit.semesters_2025 && unit.semesters_2025.trim() !== '') ||
+                (unit.semesters_2026 && unit.semesters_2026.trim() !== '');
+              
+              // If we have NO data at all for any year, don't show warning (it's a new/future unit)
+              if (!hasAnyData) {
+                return null;
+              }
+              // If we have SOME data but not for this future year, show warning
+              dataYear = 2026;
+            } else if (semesterYear < 2020) {
+              return null;
+            }
             
             const semesterKey = `semesters_${dataYear}`;
             const semesterData = unit[semesterKey];
