@@ -63,12 +63,13 @@ export default function PlanTabs({
               <button
                 onClick={() => onSwitchPlan(plan.id)}
                 onDoubleClick={() => handlePlanDoubleClick(plan)}
-                className={`px-4 py-2 rounded-l-lg font-medium transition ${
+                className={`px-4 py-2 rounded-l-lg font-medium transition whitespace-nowrap overflow-hidden text-ellipsis ${
                   plan.id === currentPlanId
                     ? 'bg-blue-600 text-white'
                     : 'border border-blue-600 text-blue-600 bg-white hover:bg-blue-50'
                 }`}
-                title="Double-click to rename"
+                style={{ maxWidth: '250px' }}
+                title={plan.name}
               >
                 {plan.name}
               </button>
