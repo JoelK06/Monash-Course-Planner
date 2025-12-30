@@ -16,6 +16,8 @@ Try the program [HERE](https://joelk06.github.io/Monash-Course-Planner/)</p>
 - Drag and drop units
 - Click and place for mobile
 - Units swap when placed on eachother
+- Credit point based unit width
+- Course cost calculator
 
 Thank you for using my program</p>
 **Created by Joel Knight**
