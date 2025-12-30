@@ -67,16 +67,30 @@ export default function UnitSlot({
     }
   };
 
+  // Calculate how many slots this unit should span
+  const getUnitSpan = (unit) => {
+    if (!unit || !unit.credit_points) return 1;
+    const cp = unit.credit_points;
+    if (cp === 0) return 1;
+    return Math.round(cp / 6);
+  };
+
   if (unit) {
+    const unitSpan = getUnitSpan(unit);
+    const shouldShowCP = unit.credit_points && unit.credit_points > 0;
+    
     return (
       <div
-        className="relative bg-white border border-gray-200 rounded-lg h-24 flex group w-full cursor-pointer"
+        className="relative bg-white border border-gray-200 rounded-lg h-24 flex group cursor-pointer"
+        style={{ 
+          gridColumn: unitSpan > 1 ? `span ${unitSpan}` : undefined,
+          width: unitSpan > 1 ? '100%' : undefined
+        }}
         draggable
         onDragStart={(e) => handleDragStart(e, unit)}
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => {
           e.preventDefault();
-          console.log('Drop on unit slot');
           onDrop(semester.id, unitIdx);
         }}
         onTouchStart={(e) => handleTouchStart(e, unit)}
@@ -92,9 +106,18 @@ export default function UnitSlot({
           className="w-2 rounded-l-lg mr-3 flex-shrink-0"
           style={{ backgroundColor: FACULTY_COLORS[unit.faculty] || FACULTY_COLORS["Unknown"] }}
         />
-        <div className="flex-1 min-w-0 overflow-hidden pt-1">
+        <div className="flex-1 min-w-0 overflow-hidden pt-1 pb-1 flex flex-col">
           <div className="font-bold text-gray-800 text-sm">{unit.code}</div>
-          <div className="text-xs text-gray-600 line-clamp-2">{unit.name}</div>
+          <div className="text-xs text-gray-600 line-clamp-2 flex-1">{unit.name}</div>
+          
+          {/* Credit Points Display */}
+          {shouldShowCP && (
+            <div className="text-xs text-gray-500 mt-auto">
+              {unit.credit_points} Credit points
+            </div>
+          )}
+          
+          {/* Warnings */}
           {hasDuplicateInSemester(semester, unit.code) ? (
             <div className="text-xs text-orange-600 mt-1">
               ⚠️ No duplicates

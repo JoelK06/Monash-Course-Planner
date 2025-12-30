@@ -16,6 +16,13 @@ export const FACULTY_COLORS = {
   "Unknown": "#0069a7"
 };
 
+export const SCA_BAND_COSTS = {
+  'SCA Band 1': 578,
+  'SCA Band 2': 1164,
+  'SCA Band 3': 1655,
+  'SCA Band 4': 2124,
+};
+
 export const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 1 week
 
 export const STORAGE_KEYS = {

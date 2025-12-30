@@ -1,4 +1,3 @@
-
 export const parseCSV = (text) => {
   const lines = text.trim().split('\n');
   
@@ -25,7 +24,9 @@ export const parseCSV = (text) => {
         semesters_2023: values[7] || '',
         semesters_2024: values[8] || '',
         semesters_2025: values[9] || '',
-        semesters_2026: values[10] || ''
+        semesters_2026: values[10] || '',
+        credit_points: parseFloat(values[11]) || 6,
+        sca_band: values[12] || ''
       };
     })
     .filter(unit => unit.code && unit.code !== 'code');

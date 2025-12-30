@@ -138,6 +138,11 @@ export default function Sidebar({
                     <div className="flex-1">
                       <div className="font-bold text-gray-800">{unit.code}</div>
                       <div className="text-sm text-gray-600">{unit.name}</div>
+                      {unit.credit_points && unit.credit_points > 0 && (
+                        <div className="text-xs text-gray-500 mt-1">
+                          {unit.credit_points} CP
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))

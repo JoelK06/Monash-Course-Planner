@@ -238,21 +238,42 @@ export default function SemesterRow({
             <span className="text-yellow-600 font-semibold">Academic Leave</span>
           </div>
         ) : (
-          <div className={isMobile ? 'grid gap-2 grid-cols-2' : `grid gap-2 ${semester.semesterType === 'Summer' || semester.semesterType === 'Winter' ? 'grid-cols-4' : 'grid-cols-' + semester.units.length}`}>
-            {semester.units.map((unit, unitIdx) => (
-              <UnitSlot
-                key={unit?._instanceId || `empty-${unitIdx}`}
-                unit={unit}
-                unitIdx={unitIdx}
-                semester={semester}
-                selectedUnit={selectedUnit}
-                draggedUnit={draggedUnit}
-                setDraggedUnit={setDraggedUnit}
-                onDrop={onDrop}
-                onRemoveUnit={onRemoveUnit}
-                onUnitClick={onUnitClick}
-              />
-            ))}
+          <div className={isMobile ? 'grid gap-2 grid-cols-2' : 'grid gap-2 auto-cols-fr'} 
+              style={isMobile ? {} : { 
+                display: 'grid',
+                gridTemplateColumns: `repeat(${Math.max(4, semester.units.length)}, 1fr)`,
+                gap: '0.5rem'
+              }}>
+            {semester.units.map((unit, unitIdx) => {
+              // Skip rendering if this slot is occupied by a multi-slot unit
+              if (unitIdx > 0 && !unit) {
+                // Check if previous slots contain a multi-credit unit that spans here
+                for (let checkIdx = unitIdx - 1; checkIdx >= 0; checkIdx--) {
+                  const checkUnit = semester.units[checkIdx];
+                  if (checkUnit && checkUnit.credit_points) {
+                    const span = Math.round(checkUnit.credit_points / 6);
+                    if (checkIdx + span > unitIdx) {
+                      return null; // Skip - this is occupied by the multi-credit unit
+                    }
+                  }
+                }
+              }
+              
+              return (
+                <UnitSlot
+                  key={unit?._instanceId || `empty-${unitIdx}`}
+                  unit={unit}
+                  unitIdx={unitIdx}
+                  semester={semester}
+                  selectedUnit={selectedUnit}
+                  draggedUnit={draggedUnit}
+                  setDraggedUnit={setDraggedUnit}
+                  onDrop={onDrop}
+                  onRemoveUnit={onRemoveUnit}
+                  onUnitClick={onUnitClick}
+                />
+              );
+            })}
           </div>
         )}
       </td>

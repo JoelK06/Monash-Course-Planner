@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useUnitsData } from './hooks/useUnitsData';
 import { useDarkMode } from './hooks/useDarkMode';
 import { Loader } from './components/Icons/Icons';
@@ -9,26 +9,26 @@ import Sidebar from './components/Sidebar/Sidebar';
 import Header from './components/Header/Header';
 import SemesterGrid from './components/Grid/SemesterGrid';
 import { STORAGE_KEYS } from './utils/constants';
+import { calculateCourseCost } from './utils/costCalculator';
 
 function App() {
   const { unitsData, loading, error } = useUnitsData();
   const { darkMode, toggleDarkMode } = useDarkMode();
-  
   const [showLanding, setShowLanding] = useState(true);
   const [showSetup, setShowSetup] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
-  
   const [plans, setPlans] = useState([]);
   const [currentPlanId, setCurrentPlanId] = useState(null);
   const [startYear, setStartYear] = useState(2025);
   const [degreeLength, setDegreeLength] = useState(4);
   const [semesters, setSemesters] = useState([]);
-  
   const [selectedFaculty, setSelectedFaculty] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUnit, setSelectedUnit] = useState(null);
   const [draggedUnit, setDraggedUnit] = useState(null);
+  const [courseCost, setCourseCost] = useState(0);
 
+  // Save to localStorage whenever semesters change
   useEffect(() => {
     if (semesters.length > 0 && currentPlanId && plans.length > 0) {
       const updatedPlans = plans.map(p => 
@@ -40,6 +40,7 @@ function App() {
     }
   }, [semesters]);
 
+  // Load saved plans when units data is ready
   useEffect(() => {
     if (unitsData.length === 0) return;
     
@@ -47,13 +48,15 @@ function App() {
       const saved = localStorage.getItem(STORAGE_KEYS.PLANS);
       if (saved) {
         const allPlans = JSON.parse(saved);
-  
+        
+        // Refresh unit data for all plans
         const refreshedPlans = allPlans.map(plan => ({
           ...plan,
           semesters: plan.semesters.map(sem => ({
             ...sem,
             units: sem.units.map(unit => {
               if (!unit || unit === 'ACADEMIC_LEAVE') return unit;
+              // Find fresh unit data
               const freshUnit = unitsData.find(u => u.code === unit.code);
               if (freshUnit) {
                 return { ...freshUnit, _instanceId: unit._instanceId || Date.now() + Math.random() };
@@ -78,6 +81,11 @@ function App() {
       localStorage.removeItem(STORAGE_KEYS.PLANS);
     }
   }, [unitsData]);
+
+  useEffect(() => {
+    const cost = calculateCourseCost(semesters);
+    setCourseCost(cost);
+  }, [semesters]);
 
   const loadPlan = (plan) => {
     const validSemesters = plan.semesters.map(sem => ({
@@ -285,12 +293,14 @@ function App() {
             degreeLength: data.degreeLength || 4,
             semesters: data.semesters || []
           };
-
+          
+          // Refresh unit data from current unitsData
           const validSemesters = newPlan.semesters.map(sem => ({
             ...sem,
             units: Array.isArray(sem.units) 
               ? sem.units.map(unit => {
                   if (!unit || unit === 'ACADEMIC_LEAVE') return unit;
+                  // Find the fresh unit data
                   const freshUnit = unitsData.find(u => u.code === unit.code);
                   if (freshUnit) {
                     return { ...freshUnit, _instanceId: Date.now() + Math.random() };
@@ -389,6 +399,7 @@ function App() {
           darkMode={darkMode}
           onToggleDarkMode={toggleDarkMode}
           onShowInfo={() => setShowInfoModal(true)}
+          courseCost={courseCost}
         />
         
         <SemesterGrid

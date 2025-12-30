@@ -14,7 +14,8 @@ export default function Header({
   onImport,
   darkMode,
   onToggleDarkMode,
-  onShowInfo 
+  onShowInfo,
+  courseCost 
 }) {
   return (
     <>
@@ -58,6 +59,7 @@ export default function Header({
           onImport={onImport}
           darkMode={darkMode}
           onToggleDarkMode={onToggleDarkMode}
+          courseCost={courseCost}
         />
       </div>
     </>

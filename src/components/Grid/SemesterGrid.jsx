@@ -46,13 +46,21 @@ export default function SemesterGrid({
     const newSemesters = [...semesters];
     const semIndex = newSemesters.findIndex(s => s.id === semesterId);
     
-    let fromSemIndex = -1;
-    let fromUnitIndex = -1;
-  
+    const creditPoints = unitToPlace.credit_points || 6;
+    const slotsNeeded = Math.round(creditPoints / 6);
+
+    const totalSlots = newSemesters[semIndex].units.length;
+    if (unitIndex + slotsNeeded > totalSlots) {
+      unitIndex = Math.max(0, totalSlots - slotsNeeded);
+    }
+
     const isFromGrid = unitToPlace._instanceId !== undefined;
     
     if (isFromGrid) {
-      // Find where the unit is coming from
+      let fromSemIndex = -1;
+      let fromUnitIndex = -1;
+      let fromSlotsUsed = 1;
+      
       for (let i = 0; i < newSemesters.length; i++) {
         const foundIndex = newSemesters[i].units.findIndex(u => 
           u && u._instanceId === unitToPlace._instanceId
@@ -60,31 +68,63 @@ export default function SemesterGrid({
         if (foundIndex !== -1) {
           fromSemIndex = i;
           fromUnitIndex = foundIndex;
+          fromSlotsUsed = Math.round((newSemesters[i].units[foundIndex].credit_points || 6) / 6);
           break;
         }
       }
       
-      // Don't do anything if dropping in the same spot
       if (fromSemIndex === semIndex && fromUnitIndex === unitIndex) {
         if (setDraggedUnit) setDraggedUnit(null);
         return;
       }
       
-      // Swap the units
-      const temp = newSemesters[semIndex].units[unitIndex];
-      newSemesters[semIndex].units[unitIndex] = unitToPlace;
+      const displacedUnits = [];
+      for (let i = 0; i < slotsNeeded && unitIndex + i < newSemesters[semIndex].units.length; i++) {
+        const targetSlot = newSemesters[semIndex].units[unitIndex + i];
+        if (targetSlot && targetSlot._instanceId !== unitToPlace._instanceId) {
+          displacedUnits.push(targetSlot);
+        }
+      }
       
-      if (fromSemIndex !== -1 && fromUnitIndex !== -1) {
-        newSemesters[fromSemIndex].units[fromUnitIndex] = temp;
+      const sourceUnits = [];
+      if (fromSemIndex !== -1) {
+        for (let i = 0; i < fromSlotsUsed && fromUnitIndex + i < newSemesters[fromSemIndex].units.length; i++) {
+          sourceUnits.push(newSemesters[fromSemIndex].units[fromUnitIndex + i]);
+        }
+      }
+
+      if (fromSemIndex !== -1) {
+        for (let i = 0; i < fromSlotsUsed && fromUnitIndex + i < newSemesters[fromSemIndex].units.length; i++) {
+          newSemesters[fromSemIndex].units[fromUnitIndex + i] = null;
+        }
+      }
+
+      for (let i = 0; i < slotsNeeded && unitIndex + i < newSemesters[semIndex].units.length; i++) {
+        newSemesters[semIndex].units[unitIndex + i] = null;
+      }
+
+      newSemesters[semIndex].units[unitIndex] = unitToPlace;
+      for (let i = 1; i < slotsNeeded && unitIndex + i < newSemesters[semIndex].units.length; i++) {
+        newSemesters[semIndex].units[unitIndex + i] = null;
+      }
+
+      let displacedIdx = 0;
+      if (fromSemIndex !== -1) {
+        for (let i = 0; i < fromSlotsUsed && fromUnitIndex + i < newSemesters[fromSemIndex].units.length; i++) {
+          if (displacedIdx < displacedUnits.length) {
+            newSemesters[fromSemIndex].units[fromUnitIndex + i] = displacedUnits[displacedIdx];
+            const unitSlots = Math.round((displacedUnits[displacedIdx].credit_points || 6) / 6);
+            for (let j = 1; j < unitSlots && fromUnitIndex + i + j < newSemesters[fromSemIndex].units.length; j++) {
+              newSemesters[fromSemIndex].units[fromUnitIndex + i + j] = null;
+              i++;
+            }
+            displacedIdx++;
+          }
+        }
       }
     } else {
-      // Adding from sidebar - check for duplicates
-      const duplicateIndex = newSemesters[semIndex].units.findIndex(
-        (u, idx) => u && u.code === unitToPlace.code && idx !== unitIndex
-      );
-      
-      if (duplicateIndex !== -1) {
-        newSemesters[semIndex].units[duplicateIndex] = null;
+      for (let i = 0; i < slotsNeeded && unitIndex + i < newSemesters[semIndex].units.length; i++) {
+        newSemesters[semIndex].units[unitIndex + i] = null;
       }
       
       const newUnit = { ...unitToPlace, _instanceId: Date.now() + Math.random() };

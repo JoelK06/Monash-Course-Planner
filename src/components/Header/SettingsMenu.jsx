@@ -5,7 +5,8 @@ export default function SettingsMenu({
   onExport, 
   onImport, 
   darkMode, 
-  onToggleDarkMode 
+  onToggleDarkMode,
+  courseCost 
 }) {
   const [showSettings, setShowSettings] = useState(false);
 
@@ -34,7 +35,16 @@ export default function SettingsMenu({
       </button>
 
       {showSettings && (
-        <div className="absolute right-0 top-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 w-48">
+        <div className="absolute right-0 top-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 w-56">
+          <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
+            <div className="text-xs text-gray-600">Course Cost (CSP)</div>
+            <div className="text-lg font-bold text-gray-800">
+              ${(courseCost || 0).toLocaleString('en-AU', { 
+                minimumFractionDigits: 2, 
+                maximumFractionDigits: 2 
+              })}
+            </div>
+          </div>
           <button
             onClick={() => {
               onImport();
