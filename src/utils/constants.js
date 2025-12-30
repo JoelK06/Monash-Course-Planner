@@ -1,6 +1,6 @@
 export const UNITS_CSV_URL = 'https://raw.githubusercontent.com/JoelK06/Monash-units/refs/heads/main/data/monash_units_complete.csv';
 
-export const DATA_VERSION = '2';
+export const DATA_VERSION = '3';
 
 export const FACULTY_COLORS = {
   "Business & Economics": "#00bcd4",
